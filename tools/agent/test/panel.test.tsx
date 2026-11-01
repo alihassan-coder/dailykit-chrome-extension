@@ -26,10 +26,18 @@ describe('Browser agent panel', () => {
 	});
 
 	it('offers the models of the providers you have keys for', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(
+				async () =>
+					new Response(
+						JSON.stringify({ data: [{ id: 'claude-opus-5-5', display_name: 'Claude Opus 5.5' }], has_more: false })
+					)
+			)
+		);
 		await fakeBrowser.storage.local.set({ 'tb:ai:keys': { anthropic: 'sk-ant-test-0123456789abcdef' } });
 		renderPanel();
-		const picker = (await screen.findByRole('combobox', { name: 'Model' })) as HTMLSelectElement;
-		expect(picker.value).toBe('anthropic|claude-opus-5-5');
+		expect(await screen.findByRole('button', { name: 'Model: Claude Opus 5.5. Change model' })).toBeTruthy();
 		expect(screen.getByRole('textbox', { name: 'Ask the agent' })).toBeTruthy();
 	});
 });

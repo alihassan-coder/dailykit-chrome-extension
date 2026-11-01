@@ -1,5 +1,5 @@
 // The browser agent in the side panel: ask in plain words, watch each step, approve every action.
-import { featureOn, resolveApiKeys, toolValue, type ApiKeys, type ProviderId } from '@toolbelt/core';
+import { featureOn, resolveApiKeys, toolValue, type ApiKeys } from '@toolbelt/core';
 import { Button, EmptyState, IconButton, localArea, useSettings } from '@toolbelt/ui';
 import type { ModelMessage } from 'ai';
 import { Ban, Check, CircleSlash, Globe, KeyRound, RotateCcw, Send, ShieldAlert, Square, X } from 'lucide-react';
@@ -7,7 +7,9 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { browser } from 'wxt/browser';
 import { runAgent, type AgentEvent, type ApprovalAnswer, type ApprovalRequest } from './loop.ts';
 import { activeTab, pageApi } from './page-api.ts';
-import { MODELS, createModel, defaultChoice, type ModelChoice } from './providers.ts';
+import { ModelPicker } from './ModelPicker.tsx';
+import { available, refresh, resolveCache, type ModelCache } from './models.ts';
+import { createModel, defaultChoice, type ModelChoice } from './providers.ts';
 
 const keysStore = toolValue(localArea, 'ai', 'keys', resolveApiKeys);
 const asSites = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : []);
@@ -15,6 +17,8 @@ const allowedSites = toolValue(localArea, 'agent', 'allowed-sites', asSites);
 // Tool packages cannot see the app's generated page types; the dashboard is options.html in the Toolbelt app.
 const dashboardUrl = (section: string) =>
 	(browser.runtime as unknown as { getURL(path: string): string }).getURL(`/options.html#${section}`);
+
+const modelCache = toolValue(localArea, 'agent', 'models', resolveCache);
 
 const choiceStore = toolValue(localArea, 'agent', 'model', (v) =>
 	typeof v === 'object' && v !== null && 'provider' in v && 'model' in v ? (v as ModelChoice) : null
@@ -66,77 +70,13 @@ function ApprovalCard({ request, onAnswer }: { request: ApprovalRequest; onAnswe
 	);
 }
 
-function ModelPicker({
-	keys,
-	choice,
-	onChange
-}: {
-	keys: ApiKeys;
-	choice: ModelChoice;
-	onChange: (c: ModelChoice) => void;
-}) {
-	const providers = (Object.keys(MODELS) as ProviderId[]).filter((p) => keys[p]);
-	const known = MODELS[choice.provider].some((m) => m.id === choice.model);
-	const [typing, setTyping] = useState<ProviderId | null>(null);
-	const [typed, setTyped] = useState('');
-
-	if (typing) {
-		return (
-			<form
-				className="flex min-w-0 flex-1 gap-1"
-				onSubmit={(e) => {
-					e.preventDefault();
-					if (typed.trim()) onChange({ provider: typing, model: typed.trim() });
-					setTyping(null);
-				}}
-			>
-				<input
-					autoFocus
-					value={typed}
-					onChange={(e) => setTyped(e.target.value)}
-					placeholder="Model id, e.g. claude-opus-5-5"
-					aria-label="Model id"
-					className="h-8 min-w-0 flex-1 rounded-md border border-line bg-surface px-2 font-mono text-sm outline-none focus:border-accent"
-				/>
-				<Button type="submit" variant="primary" className="min-h-8">
-					Use
-				</Button>
-			</form>
-		);
-	}
-
-	return (
-		<select
-			aria-label="Model"
-			value={`${choice.provider}|${choice.model}`}
-			onChange={(e) => {
-				const [provider, model] = e.target.value.split('|') as [ProviderId, string];
-				if (model === '__other') {
-					setTyped('');
-					setTyping(provider);
-				} else onChange({ provider, model });
-			}}
-			className="h-8 min-w-0 rounded-md border border-line bg-surface px-2 text-sm"
-		>
-			{providers.map((p) => (
-				<optgroup key={p} label={p === 'xai' ? 'xAI' : p[0]!.toUpperCase() + p.slice(1)}>
-					{MODELS[p].map((m) => (
-						<option key={m.id} value={`${p}|${m.id}`}>
-							{m.label}
-						</option>
-					))}
-					{p === choice.provider && !known && <option value={`${p}|${choice.model}`}>{choice.model}</option>}
-					<option value={`${p}|__other`}>Other model…</option>
-				</optgroup>
-			))}
-		</select>
-	);
-}
-
 export default function AgentPanel() {
 	const { settings } = useSettings();
 	const [keys, setKeys] = useState<ApiKeys | null>(null);
 	const [choice, setChoice] = useState<ModelChoice | null>(null);
+	const [cache, setCache] = useState<ModelCache>({});
+	const [refreshing, setRefreshing] = useState(false);
+	const [modelNote, setModelNote] = useState<string | null>(null);
 	const [entries, setEntries] = useState<Entry[]>([]);
 	const [task, setTask] = useState('');
 	const [running, setRunning] = useState(false);
@@ -146,15 +86,33 @@ export default function AgentPanel() {
 	const abort = useRef<AbortController | null>(null);
 	const end = useRef<HTMLDivElement>(null);
 
+	async function loadModels(k: ApiKeys, force = false) {
+		setRefreshing(true);
+		const { cache: next, errors } = await refresh(await modelCache.get(), k, { force });
+		await modelCache.set(next);
+		setCache(next);
+		setRefreshing(false);
+		const failed = Object.entries(errors).map(([p, e]) => `${p}: ${e}`);
+		setModelNote(failed.length ? `Couldn't refresh ${failed.join('; ')}` : null);
+		return next;
+	}
+
 	useEffect(() => {
-		void Promise.all([keysStore.get(), choiceStore.get()]).then(([k, c]) => {
+		async function start(k: ApiKeys) {
 			setKeys(k);
-			setChoice(c && k[c.provider] ? c : defaultChoice(k));
-		});
-		return keysStore.subscribe((k) => {
-			setKeys(k);
-			setChoice((c) => (c && k[c.provider] ? c : defaultChoice(k)));
-		});
+			const saved = await choiceStore.get();
+			const cached = await modelCache.get();
+			setCache(cached);
+			const pick = (c: ModelCache) =>
+				setChoice((current) => {
+					const keep = current ?? saved;
+					return keep && k[keep.provider] ? keep : defaultChoice(available(c, k));
+				});
+			pick(cached);
+			pick(await loadModels(k));
+		}
+		void keysStore.get().then(start);
+		return keysStore.subscribe((k) => void start(k));
 	}, []);
 
 	useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [entries, pending]);
@@ -248,12 +206,15 @@ export default function AgentPanel() {
 		<div className="grid gap-3">
 			<div className="flex items-center justify-between gap-2">
 				<ModelPicker
-					keys={keys}
+					models={available(cache, keys)}
 					choice={choice}
-					onChange={(c) => {
+					onChoose={(c) => {
 						setChoice(c);
 						void choiceStore.set(c);
 					}}
+					onRefresh={() => void loadModels(keys, true)}
+					refreshing={refreshing}
+					note={modelNote}
 				/>
 				<IconButton
 					label="New chat"
