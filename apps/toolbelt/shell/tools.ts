@@ -2,6 +2,7 @@
 // The tools in this build, their side-panel screens and their logos. Adding a tool: add its descriptor in
 // wxt.config.ts, then its panel and icon here. test/architecture.test.ts checks nothing is missing.
 import { createSettingsStore } from '@toolbelt/core';
+import AgentIcon from '@toolbelt/tool-agent/icon';
 import CairnIcon from '@toolbelt/tool-cairn/icon';
 import ColorPickerIcon from '@toolbelt/tool-color-picker/icon';
 import GrayscaleIcon from '@toolbelt/tool-grayscale/icon';
@@ -15,12 +16,14 @@ export type ToolEntry = (typeof registry.tools)[number];
 export const tools: ToolEntry[] = registry.tools;
 
 export const panels: Record<string, LazyExoticComponent<ComponentType>> = {
+	agent: lazy(() => import('@toolbelt/tool-agent/panel')),
 	cairn: lazy(() => import('@toolbelt/tool-cairn/panel')),
 	'color-picker': lazy(() => import('@toolbelt/tool-color-picker/panel')),
 	grayscale: lazy(() => import('@toolbelt/tool-grayscale/panel'))
 };
 
 export const icons: Record<string, ComponentType<{ size?: number }>> = {
+	agent: AgentIcon,
 	cairn: CairnIcon,
 	'color-picker': ColorPickerIcon,
 	grayscale: GrayscaleIcon
@@ -28,6 +31,7 @@ export const icons: Record<string, ComponentType<{ size?: number }>> = {
 
 /** Words people may type in the command palette to find a tool. */
 export const keywords: Record<string, string[]> = {
+	agent: ['ai', 'assistant', 'claude', 'gpt', 'grok', 'gemini', 'automate', 'ask'],
 	cairn: ['chat history', 'claude', 'chatgpt', 'save'],
 	'color-picker': ['eyedropper', 'hex', 'rgb', 'contrast'],
 	grayscale: ['grayscale', 'greyscale', 'monochrome', 'focus']

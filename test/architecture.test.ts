@@ -79,6 +79,13 @@ describe('code that runs inside web pages', () => {
 	});
 });
 
+describe('the browser agent', () => {
+	it('re-injects its page script by the name the build gives it', async () => {
+		const { scriptFile } = await import('../packages/wxt-kit/src/manifest.ts');
+		expect(read('tools', 'agent', 'src', 'page-api.ts')).toContain(`'/${scriptFile('agent', 'page')}'`);
+	});
+});
+
 describe('packages', () => {
 	it('core stays free of browser and React code, so it runs and tests anywhere', () => {
 		for (const file of readdirSync(join(root, 'packages', 'core', 'src'))) {

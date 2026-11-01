@@ -21,7 +21,8 @@
 		"@toolbelt/tool-color-picker": "workspace:*",
 		"@toolbelt/tool-grayscale": "workspace:*",
 		"lucide-react": "1.66.0",
-		"@toolbelt/db": "workspace:*"
+		"@toolbelt/db": "workspace:*",
+		"@toolbelt/tool-agent": "workspace:*"
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "4.3.3",

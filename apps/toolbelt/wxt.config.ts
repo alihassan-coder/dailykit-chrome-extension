@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
+import { agent } from '@toolbelt/tool-agent';
 import { cairn } from '@toolbelt/tool-cairn';
 import { colorPicker } from '@toolbelt/tool-color-picker';
 import { grayscale } from '@toolbelt/tool-grayscale';
@@ -16,7 +17,7 @@ export default defineConfig({
 	modules: ['@wxt-dev/module-react', '@toolbelt/wxt-kit'],
 	manifestVersion: 3, // also for Firefox (WXT defaults Firefox to MV2)
 	// Personal build: every site at install, so new tools (LinkedIn, GitHub, ...) just work.
-	toolbelt: { mode: 'bundle', siteAccess: 'all', tools: [cairn, colorPicker, grayscale] },
+	toolbelt: { mode: 'bundle', siteAccess: 'all', tools: [agent, cairn, colorPicker, grayscale] },
 	vite: () => ({
 		plugins: [tailwindcss()],
 		define: { __TB_DATABASE_URL__: JSON.stringify(env.DATABASE_URL ?? '') }

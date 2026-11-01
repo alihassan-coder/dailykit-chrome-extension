@@ -1,0 +1,17 @@
+// Messages between the side panel (where the agent runs) and the page script (which reads and acts).
+import type { PageAction } from './actuation.ts';
+
+export type PageRequest =
+	| { type: 'agent:ping' }
+	| { type: 'agent:read'; all?: boolean; ref?: string }
+	| { type: 'agent:find'; query: string }
+	| { type: 'agent:text' }
+	| { type: 'agent:target'; ref: string }
+	| { type: 'agent:act'; action: PageAction }
+	| { type: 'agent:highlight'; ref: string | null };
+
+export const isPageRequest = (m: unknown): m is PageRequest =>
+	typeof m === 'object' &&
+	m !== null &&
+	typeof (m as { type?: unknown }).type === 'string' &&
+	(m as { type: string }).type.startsWith('agent:');
