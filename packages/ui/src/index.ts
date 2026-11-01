@@ -10,3 +10,4 @@ export * from './Tooltip.tsx';
 export * from './ToolTile.tsx';
 export * from './Select.tsx';
 export * from './BrandIcon.tsx';
+export * from './panel-scroll.tsx';

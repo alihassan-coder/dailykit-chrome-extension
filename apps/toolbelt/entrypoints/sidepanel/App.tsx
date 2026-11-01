@@ -1,9 +1,30 @@
 // The side panel: search on top, the chosen tool in the middle, and a slim toolbar on the right edge that
 // opens to show names. Keyboard: Ctrl/Cmd+K search, [ toggles the toolbar, arrow keys move in the toolbar.
 import { enabledToolIds, setTheme, timeAgo, toolValue } from '@toolbelt/core';
-import { Button, EmptyState, Logo, Tooltip, localArea, useAccount, useSettings } from '@toolbelt/ui';
+import {
+	Button,
+	EmptyState,
+	Kbd,
+	Logo,
+	PanelScrollProvider,
+	Tooltip,
+	localArea,
+	useAccount,
+	useSettings
+} from '@toolbelt/ui';
 import { Lock, PanelRightClose, PanelRightOpen, Settings2 } from 'lucide-react';
-import { Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import {
+	Suspense,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+	type ButtonHTMLAttributes,
+	type KeyboardEvent,
+	type ReactNode,
+	type Ref
+} from 'react';
 import { HeaderSearch } from '../../shell/HeaderSearch.tsx';
 import { buildCommands, openDashboard } from '../../shell/commands.ts';
 import { icons, panels, settingsStore, tools } from '../../shell/tools.ts';
@@ -17,67 +38,61 @@ function ToolIcon({ id, size = 20 }: { id: string; size?: number }) {
 	return Icon ? <Icon size={size} /> : null;
 }
 
-/** One quiet line of sync status, so you always know your data is safe. */
-function SyncStatus() {
+/** The sync dot on the dashboard button, so you always know your data is safe without it taking space. */
+function useSyncNote(): { tone: 'ok' | 'warn'; text: string } | null {
 	const { account } = useAccount();
 	if (account?.state !== 'unlocked') return null;
-	const paused = account.syncError;
-	return (
-		<button
-			type="button"
-			onClick={() => openDashboard('data')}
-			title={paused ?? 'Data and sync'}
-			className="flex items-center gap-1.5 text-xs text-muted hover:text-ink"
-		>
-			<span className={`size-1.5 rounded-full ${paused ? 'bg-warn' : 'bg-ok'}`} aria-hidden="true" />
-			{paused ? 'Sync paused' : `Synced ${timeAgo(account.lastSync)}`}
-		</button>
-	);
+	if (account.syncError) return { tone: 'warn', text: `Sync paused: ${account.syncError}` };
+	return { tone: 'ok', text: `Synced ${timeAgo(account.lastSync)}` };
 }
 
-/** A toolbar action at the bottom: an icon when collapsed (with a tooltip), icon and label when open. */
-function RailAction({
+// Rail geometry in px, so the Density setting never blurs it: 48 px rail, 36 px items on a 40 px pitch.
+const RAIL = 48;
+const RAIL_OPEN = 184;
+const PITCH = 40;
+
+/** A rail row: icon always, label fading in when the rail is open. One element either way, so focus stays put. */
+function RailButton({
 	label,
 	short,
 	icon,
 	expanded,
-	onClick,
 	hint,
-	ariaExpanded
+	badge,
+	className = '',
+	...rest
 }: {
 	label: string;
 	short: string;
 	icon: ReactNode;
 	expanded: boolean;
-	onClick: () => void;
 	hint?: string;
-	ariaExpanded?: boolean;
-}) {
-	if (expanded) {
-		// Open toolbar: a full-width row, icon and label side by side, like the tool rows above.
-		return (
-			<button
-				type="button"
-				aria-expanded={ariaExpanded}
-				onClick={onClick}
-				className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2 text-muted transition-colors hover:bg-soft hover:text-ink"
-			>
-				<span className="grid size-5 shrink-0 place-items-center">{icon}</span>
-				<span className="min-w-0 flex-1 truncate text-left text-base">{short}</span>
-				{hint && <kbd className="rounded-sm border border-line px-1 text-[10px]">{hint}</kbd>}
-			</button>
-		);
-	}
+	badge?: ReactNode;
+	className?: string;
+	ref?: Ref<HTMLButtonElement>;
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'>) {
 	return (
-		<Tooltip label={label} hint={hint} side="left">
+		<Tooltip label={label} hint={hint} side="left" disabled={expanded}>
 			<button
 				type="button"
 				aria-label={label}
-				aria-expanded={ariaExpanded}
-				onClick={onClick}
-				className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-soft hover:text-ink"
+				{...rest}
+				className={`group relative flex h-9 w-full items-center gap-3 rounded-lg pr-2 pl-[7px] text-left transition-colors duration-100 ${className}`}
 			>
-				{icon}
+				<span className="relative grid size-[22px] shrink-0 place-items-center">
+					{icon}
+					{badge}
+				</span>
+				<span
+					className={`min-w-0 flex-1 truncate text-base transition-opacity duration-150 ${expanded ? 'opacity-100 delay-75' : 'opacity-0'}`}
+				>
+					{short}
+				</span>
+				{hint && (
+					<span className={`transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}>
+						<Kbd>{hint}</Kbd>
+					</span>
+				)}
 			</button>
 		</Tooltip>
 	);
@@ -86,41 +101,76 @@ function RailAction({
 export default function App() {
 	const { settings, update } = useSettings();
 	const { send } = useAccount();
-	const expanded = settings.theme.rail === 'labels';
+	const sync = useSyncNote();
 	const visible = enabledToolIds(settings)
 		.map((id) => tools.find((t) => t.id === id))
 		.filter((t) => t !== undefined);
 	const startTool = settings.general.startTool;
-	const [selected, setSelected] = useState<string | null>(startTool === 'last' ? null : startTool);
+	// undefined while "the tool I used last" is being looked up, so the wrong tool never flashes first.
+	const [selected, setSelected] = useState<string | null | undefined>(startTool === 'last' ? undefined : startTool);
+	const [visited, setVisited] = useState<string[]>([]);
 	const search = useRef<HTMLInputElement>(null);
 	const toolButtons = useRef<(HTMLButtonElement | null)[]>([]);
+	const scrollers = useRef(new Map<string, HTMLDivElement | null>());
+	const [scrolled, setScrolled] = useState(false);
+
+	// Wide panels: an open rail pushes the content and is remembered. Narrow ones: it floats over the content
+	// with a scrim, closes when you pick something, and is never saved.
+	const root = useRef<HTMLDivElement>(null);
+	const [wide, setWide] = useState(true);
+	const [overlay, setOverlay] = useState(false);
+	useLayoutEffect(() => {
+		const el = root.current;
+		if (!el) return;
+		const measure = () => setWide(el.clientWidth >= 520);
+		measure();
+		const ro = new ResizeObserver(measure);
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, []);
+	const pinned = settings.theme.rail === 'labels';
+	const expanded = wide ? pinned : overlay;
 
 	useEffect(() => {
-		// "The tool I used last": look it up once; changing the setting later should not yank the panel away.
-		if (startTool === 'last') void lastTool.get().then(setSelected);
+		if (startTool === 'last') void lastTool.get().then((id) => setSelected(id ?? null));
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const active = visible.find((t) => t.id === selected) ?? visible[0];
-	const Panel = active ? panels[active.id] : undefined;
+	const active = selected === undefined ? undefined : (visible.find((t) => t.id === selected) ?? visible[0]);
+
+	// Keep every tool you opened mounted, so a chat or half-typed text survives switching away and back.
+	if (active && !visited.includes(active.id)) setVisited([...visited, active.id]);
+
+	useLayoutEffect(() => {
+		setScrolled((scrollers.current.get(active?.id ?? '')?.scrollTop ?? 0) > 0);
+	}, [active?.id]);
 
 	function choose(id: string) {
 		setSelected(id);
+		setOverlay(false);
 		void lastTool.set(id);
 	}
-	const toggleRail = () => void update((s) => setTheme(s, { rail: s.theme.rail === 'labels' ? 'icons' : 'labels' }));
+	const toggleRail = () => {
+		if (wide) void update((s) => setTheme(s, { rail: s.theme.rail === 'labels' ? 'icons' : 'labels' }));
+		else setOverlay((o) => !o);
+	};
 
 	const commands = useMemo(() => buildCommands(settings, settingsStore, choose), [settings]);
 
 	useEffect(() => {
 		function onKey(e: globalThis.KeyboardEvent) {
-			const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+			const typing =
+				e.target instanceof HTMLInputElement ||
+				e.target instanceof HTMLTextAreaElement ||
+				(e.target instanceof HTMLElement && e.target.isContentEditable);
 			if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 				e.preventDefault();
 				search.current?.focus();
 			} else if (e.key === '[' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
 				e.preventDefault();
 				toggleRail();
+			} else if (e.key === 'Escape' && overlay) {
+				setOverlay(false);
 			}
 		}
 		window.addEventListener('keydown', onKey);
@@ -135,10 +185,12 @@ export default function App() {
 		toolButtons.current[(keys[e.key]! + visible.length) % visible.length]?.focus();
 	}
 
+	const activeIndex = active ? visible.indexOf(active) : -1;
+
 	return (
-		<div className="@container flex h-screen bg-bg text-ink">
+		<div ref={root} className="flex h-dvh overflow-hidden bg-bg text-ink">
 			<div className="flex min-w-0 flex-1 flex-col">
-				<header className="flex items-center gap-1 border-b border-line bg-surface px-2 py-1.5">
+				<header className="flex h-12 shrink-0 items-center border-b border-line bg-surface px-2.5">
 					<HeaderSearch
 						ref={search}
 						commands={commands}
@@ -147,109 +199,203 @@ export default function App() {
 					/>
 				</header>
 
-				<main className="min-h-0 flex-1 overflow-y-auto">
-					{active && Panel ? (
-						<div key={active.id} className="tb-enter mx-auto grid max-w-[560px] gap-3 p-3">
-							<div className="flex items-center justify-between gap-2">
-								<h1 className="flex min-w-0 items-center gap-2.5 text-lg font-semibold">
-									<ToolIcon id={active.id} size={26} />
-									<span className="truncate">{active.name}</span>
-								</h1>
-								<SyncStatus />
-							</div>
-							<Suspense fallback={null}>
-								<Panel />
-							</Suspense>
-						</div>
-					) : (
-						<div className="p-3">
-							<EmptyState
-								title="No tools are switched on"
-								body="Switch tools on in the dashboard and they appear in the toolbar on the right."
-								action={
-									<Button variant="primary" onClick={() => openDashboard('tools')}>
-										Open the dashboard
-									</Button>
-								}
-							/>
-						</div>
-					)}
-				</main>
+				{selected === undefined ? null : active ? (
+					visited.map((id) => {
+						const tool = tools.find((t) => t.id === id);
+						const Panel = panels[id];
+						if (!tool || !Panel || !visible.includes(tool)) return null;
+						const shown = id === active.id;
+						return (
+							<ToolScroller
+								key={id}
+								shown={shown}
+								register={(el) => scrollers.current.set(id, el)}
+								onScrolled={setScrolled}
+							>
+								<div
+									className={`sticky top-0 z-20 -mx-3 flex h-12 shrink-0 items-center gap-2.5 bg-bg px-3 transition-shadow duration-150 ${
+										shown && scrolled ? 'shadow-[0_1px_0_var(--tb-line),0_6px_12px_-8px_rgb(0_0_0/0.15)]' : ''
+									}`}
+								>
+									<ToolIcon id={id} size={24} />
+									<h1 className="min-w-0 truncate text-xl font-semibold tracking-tight" title={tool.name}>
+										{tool.name}
+									</h1>
+								</div>
+								<div className="tb-enter flex min-h-0 min-w-0 flex-1 flex-col">
+									<Suspense fallback={<div className="min-h-40" />}>
+										<Panel />
+									</Suspense>
+								</div>
+							</ToolScroller>
+						);
+					})
+				) : (
+					<div className="p-3">
+						<EmptyState
+							title="No tools are switched on"
+							body="Switch tools on in the dashboard and they appear in the toolbar on the right."
+							action={
+								<Button variant="primary" onClick={() => openDashboard('tools')}>
+									Open the dashboard
+								</Button>
+							}
+						/>
+					</div>
+				)}
 			</div>
 
-			{/* Below 480 px an opened toolbar floats over the content; from 480 px up it pushes the content aside. */}
-			<div className={`relative shrink-0 ${expanded ? 'w-12 @[480px]:w-46' : 'w-12'}`}>
+			{/* Narrow panels: the open rail floats over the content; a scrim behind it closes it. */}
+			{overlay && !wide && (
+				<button
+					type="button"
+					aria-label="Close toolbar"
+					tabIndex={-1}
+					onClick={() => setOverlay(false)}
+					className="tb-enter fixed inset-0 z-30 bg-[rgb(0_0_0/0.22)]"
+				/>
+			)}
+
+			<div className="relative shrink-0" style={{ width: wide && expanded ? RAIL_OPEN : RAIL }}>
 				<nav
 					aria-label="Tools"
-					className={`absolute inset-y-0 right-0 z-30 flex flex-col gap-1 border-l border-line bg-surface py-2 transition-[width] duration-150 ${
-						expanded ? 'w-46 px-2 shadow-float @[480px]:shadow-none' : 'w-12 items-center'
+					style={{ width: RAIL_OPEN, transform: `translateX(${expanded ? 0 : RAIL_OPEN - RAIL}px)` }}
+					className={`absolute inset-y-0 right-0 z-40 flex flex-col overflow-hidden border-l border-line bg-surface transition-transform duration-200 ease-out ${
+						expanded && !wide ? 'shadow-float' : ''
 					}`}
 				>
-					<div className={`mb-2 flex h-9 items-center gap-2 ${expanded ? 'px-1.5' : 'justify-center'}`}>
+					<div className="flex h-12 shrink-0 items-center gap-2.5 border-b border-line pl-[11px]">
 						<Logo size={26} />
-						{expanded && <span className="text-base font-semibold">Toolbelt</span>}
+						<span
+							className={`text-lg font-semibold tracking-tight transition-opacity duration-150 ${expanded ? 'opacity-100' : 'opacity-0'}`}
+						>
+							Toolbelt
+						</span>
 					</div>
-					<div role="tablist" aria-orientation="vertical" className="flex flex-col gap-1">
-						{visible.map((tool, i) => {
-							const current = tool.id === active?.id;
-							return (
-								<Tooltip key={tool.id} label={tool.name} side="left" disabled={expanded}>
-									<button
+
+					<div className="tb-no-scrollbar relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 py-2">
+						{activeIndex >= 0 && (
+							<span
+								aria-hidden="true"
+								style={{ transform: `translateY(${activeIndex * PITCH + 9}px)` }}
+								className="absolute top-2 left-0 h-[18px] w-[3px] rounded-r-full bg-accent transition-transform duration-200 ease-out"
+							/>
+						)}
+						<div role="tablist" aria-orientation="vertical" className="flex flex-col gap-1">
+							{visible.map((tool, i) => {
+								const current = tool.id === active?.id;
+								return (
+									<RailButton
+										key={tool.id}
 										ref={(el) => {
 											toolButtons.current[i] = el;
 										}}
-										type="button"
 										role="tab"
 										aria-selected={current}
-										aria-label={tool.name}
 										tabIndex={current ? 0 : -1}
+										label={tool.name}
+										short={tool.name}
+										expanded={expanded}
 										onClick={() => choose(tool.id)}
 										onKeyDown={(e) => onToolbarKey(e, i)}
-										className={`relative flex h-9 items-center gap-2.5 rounded-lg transition-colors ${
-											expanded ? 'w-full px-2' : 'w-9 justify-center'
-										} ${current ? 'bg-accent-soft text-accent' : 'text-muted hover:bg-soft hover:text-ink'}`}
-									>
-										<ToolIcon id={tool.id} size={22} />
-										{expanded && <span className="truncate text-base">{tool.name}</span>}
-										{current && (
+										className={current ? 'font-semibold text-ink' : 'text-ink/75 hover:bg-soft hover:text-ink'}
+										icon={
 											<span
-												aria-hidden="true"
-												className="absolute top-2 bottom-2 -left-2 w-[3px] rounded-full bg-accent"
-											/>
-										)}
-									</button>
-								</Tooltip>
-							);
-						})}
+												className={`grid transition-[opacity,filter,transform] duration-150 ease-out group-hover:scale-105 ${
+													current ? '' : 'opacity-70 saturate-[0.7] group-hover:opacity-100 group-hover:saturate-100'
+												}`}
+											>
+												<ToolIcon id={tool.id} size={22} />
+											</span>
+										}
+									/>
+								);
+							})}
+						</div>
 					</div>
 
-					<div className={`mt-auto flex flex-col gap-1 ${expanded ? '' : 'items-center'}`}>
-						<RailAction
+					<div className="flex shrink-0 flex-col gap-1 border-t border-line px-1.5 py-2">
+						<RailButton
 							label="Lock Toolbelt"
 							short="Lock"
-							icon={<Lock size={18} />}
+							icon={<Lock size={18} strokeWidth={1.75} />}
 							expanded={expanded}
+							className="text-muted hover:bg-soft hover:text-ink"
 							onClick={() => void send({ type: 'account:lock' })}
 						/>
-						<RailAction
-							label="Open the dashboard"
+						<RailButton
+							label={sync ? `Open the dashboard · ${sync.text}` : 'Open the dashboard'}
 							short="Dashboard"
-							icon={<Settings2 size={18} />}
+							icon={<Settings2 size={18} strokeWidth={1.75} />}
+							badge={
+								sync && (
+									<span
+										aria-hidden="true"
+										className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ring-2 ring-surface ${sync.tone === 'ok' ? 'bg-ok' : 'bg-warn'}`}
+									/>
+								)
+							}
 							expanded={expanded}
+							className="text-muted hover:bg-soft hover:text-ink"
 							onClick={() => openDashboard()}
 						/>
-						<RailAction
+						<RailButton
 							label={expanded ? 'Collapse toolbar' : 'Open toolbar'}
 							short="Collapse"
 							hint="["
-							icon={expanded ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+							icon={
+								expanded ? (
+									<PanelRightClose size={18} strokeWidth={1.75} />
+								) : (
+									<PanelRightOpen size={18} strokeWidth={1.75} />
+								)
+							}
 							expanded={expanded}
-							ariaExpanded={expanded}
+							aria-expanded={expanded}
+							className="text-muted hover:bg-soft hover:text-ink"
 							onClick={toggleRail}
 						/>
 					</div>
 				</nav>
 			</div>
+		</div>
+	);
+}
+
+/** One tool's own scroll area. Hidden tools stay mounted; their scroll position is put back when shown. */
+function ToolScroller({
+	shown,
+	register,
+	onScrolled,
+	children
+}: {
+	shown: boolean;
+	register: (el: HTMLDivElement | null) => void;
+	onScrolled: (scrolled: boolean) => void;
+	children: ReactNode;
+}) {
+	const ref = useRef<HTMLDivElement>(null);
+	const saved = useRef(0);
+	useLayoutEffect(() => {
+		const el = ref.current;
+		if (el && shown) el.scrollTop = saved.current;
+	}, [shown]);
+	return (
+		<div
+			ref={(el) => {
+				ref.current = el;
+				register(el);
+			}}
+			hidden={!shown}
+			onScroll={(e) => {
+				saved.current = e.currentTarget.scrollTop;
+				onScrolled(saved.current > 0);
+			}}
+			className="@container min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-gutter:stable]"
+		>
+			<PanelScrollProvider value={ref}>
+				<div className="mx-auto flex min-h-full w-full max-w-[560px] min-w-0 flex-col px-3 pb-3">{children}</div>
+			</PanelScrollProvider>
 		</div>
 	);
 }

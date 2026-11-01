@@ -2,19 +2,31 @@
 // then keep asking. Every analysis is saved (encrypted, synced) and can be reopened from History.
 import { ModelPicker, useModels } from '@toolbelt/ai';
 import { featureOn, timeAgo } from '@toolbelt/core';
-import { Button, EmptyState, IconButton, Select, localArea, useSettings } from '@toolbelt/ui';
-import { History, KeyRound, ListChecks, RotateCcw, ScanSearch, Send, Square, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import {
+	Button,
+	EmptyRow,
+	EmptyState,
+	IconButton,
+	Notice,
+	Select,
+	inputClass,
+	localArea,
+	useSettings,
+	useStickToBottom
+} from '@toolbelt/ui';
+import { ChevronLeft, History, KeyRound, ListChecks, RotateCcw, ScanSearch, Send, Square, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { browser } from 'wxt/browser';
 import { analyzeProfile, askAboutProfile, type ChatMessage } from './analyze.ts';
 import type { Analysis, QuestionSet } from './fields.ts';
 import { PROBLEMS, ProfileError, profileSlug, type ProfileSnapshot } from './profile.ts';
 import { browserTabs, readProfile, type ReadStep } from './reader.ts';
-import { Results } from './Results.tsx';
+import { Avatar, Results } from './Results.tsx';
 import { SetEditor } from './SetEditor.tsx';
 import { profileLensStore, type IndexEntry, type SavedAnalysis } from './store.ts';
 
 const store = profileLensStore(localArea);
+const STOPPED = 'Stopped. Nothing was saved.';
 // Tool packages cannot see the app's generated page types; the dashboard is options.html in the Toolbelt app.
 const dashboardUrl = (section: string) =>
 	(browser.runtime as unknown as { getURL(path: string): string }).getURL(`/options.html#${section}`);
@@ -57,11 +69,31 @@ function useCurrentTab() {
 	return tab;
 }
 
+/** A sub-screen header: back, title, and one optional action on the right. Sets and History both use it. */
+export function SubHeader({ title, onBack, action }: { title: string; onBack: () => void; action?: ReactNode }) {
+	return (
+		<div className="flex min-h-9 items-center gap-1">
+			<IconButton label="Back" onClick={onBack} className="-ml-1.5">
+				<ChevronLeft size={18} />
+			</IconButton>
+			<h2 className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h2>
+			{action}
+		</div>
+	);
+}
+
+const VERDICT_TONE: Record<string, string> = {
+	strong: 'bg-ok/15 text-ok',
+	possible: 'bg-accent-soft text-accent',
+	weak: 'bg-warn/15 text-warn',
+	no: 'bg-soft text-muted'
+};
+
 function Progress({ step, onStop }: { step: ReadStep | 'thinking'; onStop: () => void }) {
 	const label = step === 'thinking' ? 'Analysing with AI' : step.label;
 	const share = step === 'thinking' ? 0.92 : (step.done + 0.5) / (step.total + 1);
 	return (
-		<div role="status" className="grid gap-2 rounded-xl border border-line bg-surface p-3">
+		<div role="status" className="grid gap-2 rounded-xl border border-line bg-surface p-3 shadow-card">
 			<div className="flex items-center justify-between gap-2">
 				<p className="text-sm font-medium">{label}…</p>
 				<Button variant="quiet" icon={<Square size={14} />} onClick={onStop}>
@@ -91,13 +123,8 @@ function HistoryList({ onOpen, onBack }: { onOpen: (slug: string) => void; onBac
 	const shown = q ? entries.filter((e) => `${e.name} ${e.headline} ${e.setName}`.toLowerCase().includes(q)) : entries;
 
 	return (
-		<div className="grid gap-3">
-			<div className="flex items-center gap-2">
-				<h2 className="flex-1 text-base font-semibold">History</h2>
-				<Button variant="quiet" onClick={onBack}>
-					Done
-				</Button>
-			</div>
+		<div className="grid min-w-0 gap-3">
+			<SubHeader title="History" onBack={onBack} />
 			{entries.length === 0 ? (
 				<EmptyState title="Nothing analysed yet" body="Profiles you analyse are kept here, on all your devices." />
 			) : (
@@ -108,30 +135,29 @@ function HistoryList({ onOpen, onBack }: { onOpen: (slug: string) => void; onBac
 						onChange={(e) => setQuery(e.target.value)}
 						placeholder="Search by name, headline or set"
 						aria-label="Search history"
-						className="h-9 rounded-full border border-line bg-surface px-3.5 text-base outline-none focus:border-accent"
+						className={`${inputClass} h-9 w-full rounded-full px-3.5`}
 					/>
-					<ul className="rounded-xl border border-line bg-surface">
+					{shown.length === 0 && <EmptyRow>No profiles match “{query.trim()}”.</EmptyRow>}
+					<ul className={`overflow-hidden rounded-xl border border-line bg-surface shadow-card ${shown.length ? '' : 'hidden'}`}>
 						{shown.map((e) => (
-							<li key={e.slug} className="flex items-center gap-1 border-t border-line first:border-t-0">
+							<li key={e.slug} className="flex min-w-0 items-center gap-1 border-t border-line pr-1.5 first:border-t-0">
 								<button
 									type="button"
 									onClick={() => onOpen(e.slug)}
 									className="flex min-w-0 flex-1 items-center gap-2.5 p-2.5 text-left hover:bg-soft"
 								>
-									{e.photo ? (
-										<img src={e.photo} alt="" className="size-9 shrink-0 rounded-full bg-soft object-cover" />
-									) : (
-										<span className="grid size-9 shrink-0 place-items-center rounded-full bg-soft font-semibold text-muted">
-											{e.name.slice(0, 1)}
-										</span>
-									)}
+									<Avatar src={e.photo} name={e.name} />
 									<span className="min-w-0 flex-1">
 										<span className="block truncate font-medium">{e.name}</span>
 										<span className="block truncate text-xs text-muted">
 											{e.setName} · {timeAgo(e.analyzedAt)}
 										</span>
 									</span>
-									<span className="rounded-full bg-soft px-2 py-0.5 text-sm font-semibold tabular-nums">{e.score}</span>
+									<span
+										className={`shrink-0 rounded-full px-2 py-0.5 text-sm font-semibold tabular-nums ${VERDICT_TONE[e.verdict] ?? 'bg-soft'}`}
+									>
+										{e.score}
+									</span>
 								</button>
 								<IconButton label={`Delete ${e.name}`} onClick={() => void store.remove(e.slug)}>
 									<Trash2 size={16} />
@@ -157,7 +183,9 @@ export default function ProfileLensPanel() {
 	const [error, setError] = useState<string | null>(null);
 	const [question, setQuestion] = useState('');
 	const [answering, setAnswering] = useState(false);
+	const [chatError, setChatError] = useState<string | null>(null);
 	const abort = useRef<AbortController | null>(null);
+	const pinToBottom = useStickToBottom([record?.chat]);
 
 	useEffect(() => {
 		void Promise.all([store.sets.get(), store.activeSet.get()]).then(([s, id]) => {
@@ -220,7 +248,7 @@ export default function ProfileLensPanel() {
 			setRecord(next);
 			await store.save(next);
 		} catch (e) {
-			if (signal.aborted) setError('Stopped.');
+			if (signal.aborted) setError(STOPPED);
 			else if (e instanceof ProfileError) setError(e.message);
 			else setError(`The analysis didn’t finish: ${e instanceof Error ? e.message : String(e)}`);
 		} finally {
@@ -233,7 +261,9 @@ export default function ProfileLensPanel() {
 		const q = text.trim();
 		if (!q || !record || answering) return;
 		setQuestion('');
+		setChatError(null);
 		setAnswering(true);
+		pinToBottom();
 		const chat: ChatMessage[] = [...record.chat, { role: 'user', text: q }];
 		setRecord({ ...record, chat });
 		abort.current = new AbortController();
@@ -246,8 +276,8 @@ export default function ProfileLensPanel() {
 			}
 			await store.saveChat(record.profile.slug, [...chat, { role: 'assistant', text: reply }]);
 		} catch (err) {
-			const message = abort.current.signal.aborted ? 'Stopped.' : err instanceof Error ? err.message : String(err);
-			setRecord((r) => r && { ...r, chat: [...chat, { role: 'assistant', text: `(${message})` }] });
+			if (!abort.current.signal.aborted)
+				setChatError(`No answer this time: ${err instanceof Error ? err.message : String(err)}`);
 		} finally {
 			setAnswering(false);
 		}
@@ -274,9 +304,9 @@ export default function ProfileLensPanel() {
 	const showing = record && (!onProfile || record.profile.slug === tab?.slug) ? record : null;
 
 	return (
-		<div className="grid gap-3">
-			<div className="flex items-center gap-1">
-				<div className="min-w-0 flex-1">
+		<div className="flex min-w-0 flex-1 flex-col gap-3">
+			<div className="flex min-w-0 items-center gap-1">
+				<div className="min-w-0 flex-1 pr-1">
 					<Select
 						label="Question set"
 						value={set.id}
@@ -292,14 +322,17 @@ export default function ProfileLensPanel() {
 				</IconButton>
 			</div>
 
-			<ModelPicker
+			<div className="flex min-w-0 items-center gap-2">
+				<span className="shrink-0 text-sm text-muted">Model</span>
+				<ModelPicker
 				models={ai.models}
 				choice={ai.choice}
 				onChoose={ai.choose}
 				onRefresh={ai.refresh}
 				refreshing={ai.refreshing}
 				note={ai.note}
-			/>
+				/>
+			</div>
 
 			{busy ? (
 				<Progress step={busy} onStop={() => abort.current?.abort()} />
@@ -313,36 +346,50 @@ export default function ProfileLensPanel() {
 					>
 						{showing ? 'Analyze again' : 'Analyze this profile'}
 					</Button>
-					<p className="text-center text-xs text-muted">
+					<p className="truncate text-center text-xs text-muted">
 						{onProfile ? `linkedin.com/in/${tab!.slug}` : PROBLEMS['not-profile']}
 					</p>
 				</div>
 			)}
 
-			{error && (
-				<p role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
-					{error}
-				</p>
-			)}
+			{error && <Notice tone={error === STOPPED ? 'info' : 'danger'}>{error}</Notice>}
 
-			{showing && !busy && (
-				<>
+			{showing && (
+				// While it analyses again, the old results stay in place (dimmed) instead of the page collapsing.
+				<div
+					aria-busy={!!busy}
+					className={`flex min-w-0 flex-1 flex-col gap-3 transition-opacity ${busy ? 'pointer-events-none opacity-50' : ''}`}
+				>
 					<Results profile={showing.profile} set={showing.set} analysis={showing.analysis} />
 					<p className="text-center text-xs text-muted">
 						Analysed {timeAgo(showing.analyzedAt)} with “{showing.set.name}”
 					</p>
 
-					<section aria-label="Ask about this person" className="grid gap-2">
+					<section aria-label="Ask about this person" className="flex min-w-0 flex-1 flex-col gap-2">
 						{showing.chat.map((m, i) => (
 							<p
 								key={i}
-								className={`rounded-xl px-3 py-2 text-base whitespace-pre-wrap ${
-									m.role === 'user' ? 'ml-8 bg-accent-soft' : 'mr-4 border border-line bg-surface'
+								className={`max-w-[88%] px-3.5 py-2 text-base leading-relaxed whitespace-pre-wrap wrap-anywhere ${
+									m.role === 'user'
+										? 'self-end rounded-2xl rounded-br-md bg-accent-soft'
+										: 'self-start rounded-2xl rounded-bl-md border border-line bg-surface'
 								}`}
 							>
 								{m.text}
 							</p>
 						))}
+						{chatError && (
+							<Notice
+								tone="danger"
+								action={
+									<Button variant="quiet" onClick={() => void ask(undefined, showing.chat.at(-1)?.text ?? '')}>
+										Retry
+									</Button>
+								}
+							>
+								{chatError}
+							</Notice>
+						)}
 						{showing.chat.length === 0 && (
 							<div className="flex flex-wrap gap-1.5">
 								{SUGGESTIONS.map((s) => (
@@ -350,33 +397,43 @@ export default function ProfileLensPanel() {
 										key={s}
 										type="button"
 										onClick={() => void ask(undefined, s)}
-										className="rounded-full border border-line bg-surface px-2.5 py-1 text-sm hover:bg-soft"
+										className="rounded-full border border-line bg-surface px-3 py-1 text-sm transition-colors hover:border-accent hover:text-accent"
 									>
 										{s}
 									</button>
 								))}
 							</div>
 						)}
-						<form onSubmit={(e) => void ask(e)} className="flex items-center gap-1.5">
-							<input
+						<form
+							onSubmit={(e) => void ask(e)}
+							className="sticky bottom-0 -mx-3 mt-auto flex items-end gap-2 bg-bg/95 px-3 pt-2 pb-3 shadow-[0_-12px_12px_-4px_var(--tb-bg)]"
+						>
+							<textarea
 								value={question}
 								onChange={(e) => setQuestion(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' && !e.shiftKey) {
+										e.preventDefault();
+										e.currentTarget.form?.requestSubmit();
+									}
+								}}
+								rows={1}
 								placeholder={`Ask about ${showing.profile.name.split(' ')[0]}…`}
 								aria-label="Ask about this person"
-								className="h-9 min-w-0 flex-1 rounded-full border border-line bg-surface px-3.5 text-base outline-none focus:border-accent"
+								className={`${inputClass} max-h-32 min-h-10 flex-1 resize-none overflow-y-auto rounded-2xl px-3.5 py-2 [field-sizing:content]`}
 							/>
 							{answering ? (
-								<IconButton label="Stop" onClick={() => abort.current?.abort()}>
-									<Square size={16} />
-								</IconButton>
+								<Button icon={<Square size={14} />} onClick={() => abort.current?.abort()}>
+									Stop
+								</Button>
 							) : (
-								<IconButton label="Send" type="submit" disabled={!question.trim()}>
-									<Send size={16} />
-								</IconButton>
+								<Button type="submit" variant="primary" icon={<Send size={14} />} disabled={!question.trim()}>
+									Ask
+								</Button>
 							)}
 						</form>
 					</section>
-				</>
+				</div>
 			)}
 		</div>
 	);

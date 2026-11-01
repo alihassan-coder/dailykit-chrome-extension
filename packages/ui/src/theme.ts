@@ -74,6 +74,7 @@ export function applyTheme(el: HTMLElement, theme: Theme) {
 	const { mode, motion, vars } = themeTokens(theme, !!darkQuery()?.matches);
 	el.dataset.theme = mode;
 	el.dataset.motion = motion;
+	el.style.colorScheme = mode;
 	for (const name of CONTRAST_VARS) el.style.removeProperty(name);
 	for (const [name, value] of Object.entries(vars)) el.style.setProperty(name, value);
 }

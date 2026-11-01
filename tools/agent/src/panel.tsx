@@ -1,10 +1,10 @@
 // The browser agent in the side panel: ask in plain words, watch each step, approve every action.
 import { ModelPicker, useModels } from '@toolbelt/ai';
 import { featureOn, toolValue, type ChatTurn, type MemoryRequest, type MemoryResponse } from '@toolbelt/core';
-import { Button, EmptyState, IconButton, localArea, useSettings } from '@toolbelt/ui';
+import { Button, EmptyState, IconButton, Notice, inputClass, localArea, useSettings, useStickToBottom } from '@toolbelt/ui';
 import type { ModelMessage } from 'ai';
 import { Ban, Check, CircleSlash, Globe, KeyRound, RotateCcw, Send, ShieldAlert, Square, X } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { browser } from 'wxt/browser';
 import { runAgent, type AgentEvent, type ApprovalAnswer, type ApprovalRequest } from './loop.ts';
 import { activeTab, pageApi } from './page-api.ts';
@@ -37,7 +37,8 @@ type Entry =
 	| { kind: 'user'; text: string }
 	| { kind: 'assistant'; text: string }
 	| { kind: 'step'; summary: string; status: 'done' | 'failed' | 'declined' | 'refused' }
-	| { kind: 'notice'; text: string };
+	| { kind: 'notice'; text: string }
+	| { kind: 'error'; text: string };
 
 const STATUS = {
 	done: { icon: Check, className: 'text-ok' },
@@ -51,12 +52,14 @@ function ApprovalCard({ request, onAnswer }: { request: ApprovalRequest; onAnswe
 		<div
 			role="alertdialog"
 			aria-label="Approve this action"
-			className="grid gap-2 rounded-xl border border-accent bg-surface p-3 shadow-float"
+			tabIndex={-1}
+			ref={(el) => el?.focus()}
+			className="grid min-w-0 gap-2 rounded-xl border border-accent bg-surface p-3 shadow-float outline-none"
 		>
 			<p className="text-xs text-muted">The agent wants to</p>
-			<p className="font-semibold">{request.summary}</p>
-			<p className="flex items-center gap-1.5 text-sm text-muted">
-				<Globe size={14} /> on {request.site}
+			<p className="font-semibold wrap-anywhere">{request.summary}</p>
+			<p className="flex min-w-0 items-center gap-1.5 text-sm text-muted">
+				<Globe size={14} className="shrink-0" /> <span className="min-w-0 truncate">on {request.site}</span>
 			</p>
 			{request.warnings.map((w) => (
 				<p key={w} className="flex items-start gap-1.5 text-sm text-warn">
@@ -64,10 +67,14 @@ function ApprovalCard({ request, onAnswer }: { request: ApprovalRequest; onAnswe
 				</p>
 			))}
 			<div className="flex flex-wrap gap-2">
-				<Button variant="primary" onClick={() => onAnswer('once')} autoFocus>
+				<Button variant="primary" onClick={() => onAnswer('once')}>
 					Allow once
 				</Button>
-				{!request.alwaysAsk && <Button onClick={() => onAnswer('site')}>Always allow on {request.site}</Button>}
+				{!request.alwaysAsk && (
+					<Button onClick={() => onAnswer('site')} title={`Always allow on ${request.site}`}>
+						Always allow on this site
+					</Button>
+				)}
 				<Button variant="quiet" onClick={() => onAnswer('decline')}>
 					Decline
 				</Button>
@@ -91,9 +98,8 @@ export default function AgentPanel() {
 	const history = useRef<ModelMessage[]>([]);
 	const answer = useRef<((a: ApprovalAnswer) => void) | null>(null);
 	const abort = useRef<AbortController | null>(null);
-	const end = useRef<HTMLDivElement>(null);
-
-	useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [entries, pending]);
+	// Follows new messages while you are at the bottom; leaves you alone if you scrolled up to read.
+	const pinToBottom = useStickToBottom([entries, pending]);
 
 	if (!keys) return null;
 	if (!choice) {
@@ -135,12 +141,14 @@ export default function AgentPanel() {
 
 	async function send(e: FormEvent) {
 		e.preventDefault();
+		if (running) return;
 		const text = task.trim();
 		if (!text || running || !choice || !keys) return;
 		const tab = await activeTab();
 		if (!tab) return;
 		setTask('');
 		setEntries((l) => [...l, { kind: 'user', text }]);
+		pinToBottom();
 		setRunning(true);
 		abort.current = new AbortController();
 		try {
@@ -174,11 +182,8 @@ export default function AgentPanel() {
 					})
 			});
 		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			onEvent({
-				type: 'stopped',
-				reason: abort.current?.signal.aborted ? 'Stopped.' : `The model could not be reached: ${message}`
-			});
+			if (abort.current?.signal.aborted) onEvent({ type: 'stopped', reason: 'Stopped.' });
+			else setEntries((l) => [...l, { kind: 'error', text: friendlyError(err) }]);
 		} finally {
 			setRunning(false);
 			setPending(null);
@@ -191,8 +196,8 @@ export default function AgentPanel() {
 	}
 
 	return (
-		<div className="grid gap-3">
-			<div className="flex items-center justify-between gap-2">
+		<div className="flex min-w-0 flex-1 flex-col gap-3">
+			<div className="flex min-w-0 items-center justify-between gap-2">
 				<ModelPicker
 					models={ai.models}
 					choice={choice}
@@ -214,27 +219,36 @@ export default function AgentPanel() {
 			</div>
 
 			{entries.length === 0 && (
-				<p className="text-sm text-muted">
+				<p className="text-base text-muted">
 					Ask about this page or give it a task, like “summarise this article” or “fill in this form with my details”.
 					You approve every click and every bit of typing.
 				</p>
 			)}
 
-			<ol className="grid gap-2" aria-live="polite">
+			<p role="status" className="sr-only">
+				{pending ? 'Waiting for your approval' : running ? '' : entries.length ? 'Answer ready' : ''}
+			</p>
+			<ol className="grid min-w-0 flex-1 content-start gap-2.5" aria-busy={running}>
 				{entries.map((entry, i) => {
 					if (entry.kind === 'user')
 						return (
 							<li
 								key={i}
-								className="max-w-[85%] justify-self-end rounded-2xl rounded-br-sm bg-accent-soft px-3 py-1.5 text-base text-ink"
+								className="max-w-[85%] justify-self-end rounded-2xl rounded-br-md bg-accent-soft px-3.5 py-2 text-base whitespace-pre-wrap text-ink wrap-anywhere"
 							>
 								{entry.text}
 							</li>
 						);
 					if (entry.kind === 'assistant')
 						return (
-							<li key={i} className="text-base leading-relaxed whitespace-pre-wrap">
+							<li key={i} className="text-base leading-relaxed whitespace-pre-wrap wrap-anywhere">
 								{entry.text}
+							</li>
+						);
+					if (entry.kind === 'error')
+						return (
+							<li key={i}>
+								<Notice tone="danger">{entry.text}</Notice>
 							</li>
 						);
 					if (entry.kind === 'notice')
@@ -247,16 +261,18 @@ export default function AgentPanel() {
 					return (
 						<li key={i} className="flex items-start gap-2 text-sm text-muted">
 							<Icon size={16} className={`mt-0.5 shrink-0 ${className}`} />
-							<span>{entry.summary}</span>
+							<span className="min-w-0 wrap-anywhere">{entry.summary}</span>
 						</li>
 					);
 				})}
 			</ol>
 
 			{pending && <ApprovalCard request={pending} onAnswer={(a) => answer.current?.(a)} />}
-			<div ref={end} />
 
-			<form onSubmit={send} className="sticky bottom-0 grid gap-1.5 bg-bg pt-2 pb-1">
+			<form
+				onSubmit={send}
+				className="sticky bottom-0 -mx-3 grid gap-2 bg-bg/95 px-3 pt-2 pb-3 shadow-[0_-12px_12px_-4px_var(--tb-bg)]"
+			>
 				<textarea
 					value={task}
 					onChange={(e) => setTask(e.target.value)}
@@ -269,8 +285,7 @@ export default function AgentPanel() {
 					rows={2}
 					placeholder="Ask about this page or give it a task"
 					aria-label="Ask the agent"
-					disabled={running}
-					className="w-full resize-none rounded-2xl border border-line bg-surface px-3.5 py-2 text-base outline-none focus:border-accent disabled:opacity-60"
+					className={`${inputClass} max-h-40 min-h-16 w-full resize-none overflow-y-auto rounded-2xl px-3.5 py-2.5 [field-sizing:content]`}
 				/>
 				<div className="flex justify-end">
 					{running ? (
@@ -286,4 +301,17 @@ export default function AgentPanel() {
 			</form>
 		</div>
 	);
+}
+
+/** Turns a provider error into a sentence that says what to do next. */
+function friendlyError(err: unknown): string {
+	const message = err instanceof Error ? err.message : String(err);
+	if (/401|unauthori[sz]ed|invalid.*(api key|x-api-key)|authentication/i.test(message))
+		return 'That API key was rejected. Check it in Dashboard → AI providers.';
+	if (/429|rate limit|quota/i.test(message)) return 'The provider is rate-limiting this key. Wait a moment and try again.';
+	if (/fetch failed|network|ENOTFOUND|Failed to fetch/i.test(message))
+		return 'The AI provider could not be reached. Check your connection and try again.';
+	if (/No output generated/i.test(message))
+		return 'The model returned nothing. The key may be invalid or the model unavailable; check AI providers.';
+	return `The model could not answer: ${message}`;
 }

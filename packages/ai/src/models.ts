@@ -35,7 +35,20 @@ const NOT_CHAT =
 	/(embed|tts|whisper|transcribe|dall-e|image|moderation|realtime|audio|search|babbage|davinci|computer-use|codex-mini)/i;
 export const isChatModel = (id: string) => !NOT_CHAT.test(id);
 
-const pretty = (id: string) => id.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+// "gpt-5.5-mini" → "GPT-5.5 mini", "o3-pro" → "o3 pro": brand words keep their own casing.
+const BRANDS: Record<string, string> = { gpt: 'GPT', chatgpt: 'ChatGPT', grok: 'Grok', gemini: 'Gemini', claude: 'Claude' };
+export const pretty = (id: string) => {
+	const words = id.split(/[-_ ]+/).filter(Boolean);
+	const out: string[] = [];
+	for (const w of words) {
+		const brand = BRANDS[w.toLowerCase()];
+		const prev = out.at(-1);
+		// A version right after GPT joins with a hyphen: GPT-5.5, GPT-4o.
+		if (prev === 'GPT' && /^\d/.test(w)) out[out.length - 1] = `GPT-${w}`;
+		else out.push(brand ?? w.toLowerCase());
+	}
+	return out.join(' ');
+};
 
 export class ModelsError extends Error {}
 

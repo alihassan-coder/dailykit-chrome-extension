@@ -2,11 +2,11 @@
 // past analyses still point at it.
 import { Button, IconButton, Select } from '@toolbelt/ui';
 import { ArrowDown, ArrowUp, ChevronLeft, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FIELD_TYPES, newId, type Field, type FieldType, type QuestionSet } from './fields.ts';
 
 const input =
-	'w-full rounded-md border border-line bg-bg px-2.5 py-1.5 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent/30';
+	'rounded-lg border border-line bg-surface px-2.5 py-1.5 text-base outline-none placeholder:text-muted focus:border-accent focus-visible:outline-none focus:shadow-[0_0_0_3px_var(--tb-accent-soft)]';
 
 function FieldEditor({
 	field,
@@ -28,14 +28,14 @@ function FieldEditor({
 	const set = (patch: Partial<Field>) => onChange({ ...field, ...patch });
 
 	return (
-		<li className="grid gap-2 rounded-lg border border-line bg-surface p-2.5">
+		<li className="grid min-w-0 gap-2 rounded-xl border border-line bg-surface p-3 shadow-card">
 			<div className="flex items-center gap-1">
 				<input
 					value={field.label}
 					onChange={(e) => set({ label: e.target.value })}
 					placeholder="Your question"
 					aria-label="Question"
-					className={input}
+					className={`${input} min-w-0 flex-1`}
 				/>
 				<IconButton label="Move up" disabled={first} onClick={() => onMove(-1)}>
 					<ArrowUp size={16} />
@@ -43,9 +43,7 @@ function FieldEditor({
 				<IconButton label="Move down" disabled={last} onClick={() => onMove(1)}>
 					<ArrowDown size={16} />
 				</IconButton>
-				<IconButton label="Remove question" onClick={onRemove}>
-					<Trash2 size={16} />
-				</IconButton>
+				<ConfirmIcon label="Remove question" onConfirm={onRemove} />
 			</div>
 			<Select<FieldType>
 				label="Answer type"
@@ -78,7 +76,7 @@ function FieldEditor({
 					}
 					placeholder="Options, separated by commas"
 					aria-label="Options"
-					className={input}
+					className={`${input} w-full`}
 				/>
 			)}
 			{field.type === 'score' && (
@@ -89,7 +87,7 @@ function FieldEditor({
 						value={field.min ?? 1}
 						onChange={(e) => set({ min: Number(e.target.value) })}
 						aria-label="Lowest score"
-						className={`${input} w-20`}
+						className={`${input} w-20 min-w-0`}
 					/>
 					to
 					<input
@@ -97,7 +95,7 @@ function FieldEditor({
 						value={field.max ?? 10}
 						onChange={(e) => set({ max: Number(e.target.value) })}
 						aria-label="Highest score"
-						className={`${input} w-20`}
+						className={`${input} w-20 min-w-0`}
 					/>
 				</label>
 			)}
@@ -111,7 +109,7 @@ function FieldEditor({
 				}
 				aria-label="Guidance"
 				rows={field.type === 'custom' ? 2 : 1}
-				className={`${input} resize-y text-sm`}
+				className={`${input} w-full resize-y text-sm`}
 			/>
 		</li>
 	);
@@ -147,12 +145,12 @@ export function SetEditor({
 	}
 
 	return (
-		<div className="grid gap-3">
-			<div className="flex items-center gap-2">
-				<IconButton label="Back to analysis" onClick={onDone}>
+		<div className="grid min-w-0 gap-3">
+			<div className="flex min-h-9 items-center gap-1">
+				<IconButton label="Back to analysis" onClick={onDone} className="-ml-1.5">
 					<ChevronLeft size={18} />
 				</IconButton>
-				<h2 className="flex-1 text-base font-semibold">Question sets</h2>
+				<h2 className="min-w-0 flex-1 truncate text-lg font-semibold">Question sets</h2>
 				<Button icon={<Plus size={16} />} onClick={addSet}>
 					New set
 				</Button>
@@ -167,7 +165,7 @@ export function SetEditor({
 
 			<label className="grid gap-1">
 				<span className="text-sm font-medium">Name</span>
-				<input value={set.name} onChange={(e) => update({ name: e.target.value })} className={input} />
+				<input value={set.name} onChange={(e) => update({ name: e.target.value })} className={`${input} w-full`} />
 			</label>
 
 			<label className="grid gap-1">
@@ -180,7 +178,7 @@ export function SetEditor({
 					onChange={(e) => update({ icp: e.target.value })}
 					rows={4}
 					placeholder="e.g. Heads of sales at B2B SaaS companies with 20–200 people in Europe"
-					className={`${input} resize-y`}
+					className={`${input} w-full resize-y`}
 				/>
 			</label>
 
@@ -215,11 +213,46 @@ export function SetEditor({
 				</Button>
 			</div>
 
-			{sets.length > 1 && (
-				<Button variant="quiet" icon={<Trash2 size={16} />} onClick={removeSet}>
-					Delete “{set.name}”
-				</Button>
-			)}
+			{sets.length > 1 && <ConfirmDelete name={set.name} onConfirm={removeSet} />}
 		</div>
 	);
 }
+
+/** Deleting asks twice: the first press turns the button into "Delete?" for three seconds. */
+function useConfirm(onConfirm: () => void): [boolean, () => void] {
+	const [armed, setArmed] = useState(false);
+	useEffect(() => {
+		if (!armed) return;
+		const t = setTimeout(() => setArmed(false), 3000);
+		return () => clearTimeout(t);
+	}, [armed]);
+	return [armed, () => (armed ? onConfirm() : setArmed(true))];
+}
+
+function ConfirmIcon({ label, onConfirm }: { label: string; onConfirm: () => void }) {
+	const [armed, press] = useConfirm(onConfirm);
+	return armed ? (
+		<Button variant="danger" className="min-h-8 px-2.5 text-sm" onClick={press}>
+			Remove?
+		</Button>
+	) : (
+		<IconButton label={label} onClick={press}>
+			<Trash2 size={16} />
+		</IconButton>
+	);
+}
+
+function ConfirmDelete({ name, onConfirm }: { name: string; onConfirm: () => void }) {
+	const [armed, press] = useConfirm(onConfirm);
+	return (
+		<Button
+			variant={armed ? 'danger' : 'quiet'}
+			icon={<Trash2 size={16} />}
+			onClick={press}
+			className="justify-self-start"
+		>
+			{armed ? `Delete “${name}”? Press again` : `Delete “${name}”`}
+		</Button>
+	);
+}
+
