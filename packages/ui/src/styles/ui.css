@@ -3,6 +3,7 @@
 @import 'tailwindcss' source(none);
 @source '../';
 @source '../../../../tools';
+@source '../../../../apps';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
@@ -26,8 +27,8 @@
 	--color-warn: var(--tb-warn);
 	--color-danger: var(--tb-danger);
 
-	--font-ui: 'Schibsted Grotesk', 'Segoe UI', system-ui, sans-serif;
-	--font-read: 'Source Serif 4', Georgia, serif;
+	--font-ui: 'Schibsted Grotesk Variable', 'Schibsted Grotesk', 'Segoe UI', system-ui, sans-serif;
+	--font-read: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif;
 	--font-mono: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
 
 	--text-xs: calc(12px * var(--tb-scale));
@@ -53,6 +54,10 @@
 	--shadow-float: 0 1px 2px rgb(0 0 0 / 0.08), 0 12px 32px -12px rgb(0 0 0 / 0.28);
 
 	--ease-out: cubic-bezier(0.2, 0, 0, 1);
+	--breakpoint-sm: 640px;
+	--breakpoint-md: 768px;
+	--default-transition-duration: 120ms;
+	--default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* Default token values (light). The theme engine overwrites these on the root element at runtime. */

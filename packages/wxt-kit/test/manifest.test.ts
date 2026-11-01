@@ -64,6 +64,15 @@ describe('applyTools (bundle)', () => {
 	});
 });
 
+describe('applyTools (bundle, all sites)', () => {
+	it('asks for every site once and keeps no optional tool hosts', () => {
+		const m = applyTools(generated(), [cairn], 'bundle', 'all');
+		expect(m.host_permissions).toEqual(['https://neon.example/*', '<all_urls>']);
+		expect(m).not.toHaveProperty('optional_host_permissions');
+		expect(m.content_scripts).toHaveLength(1);
+	});
+});
+
 describe('applyTools (standalone)', () => {
 	it('keeps static content scripts and host permissions', () => {
 		const m = applyTools(generated(), [cairn], 'standalone');

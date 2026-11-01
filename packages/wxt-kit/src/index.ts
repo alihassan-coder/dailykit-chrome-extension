@@ -5,14 +5,15 @@ import 'wxt';
 import { addViteConfig, defineWxtModule } from 'wxt/modules';
 import type { ToolDescriptor } from '@toolbelt/core';
 import { tailwindPrefixPlugin } from './css.ts';
-import { applyTools, entryName, runtimeRegistry, type BuildMode } from './manifest.ts';
+import { applyTools, entryName, runtimeRegistry, type BuildMode, type SiteAccess } from './manifest.ts';
 
-export { applyTools, entryName, runtimeRegistry, scriptFile, type BuildMode } from './manifest.ts';
+export { applyTools, entryName, runtimeRegistry, scriptFile, type BuildMode, type SiteAccess } from './manifest.ts';
 export { prefixTailwindVars } from './css.ts';
 
 export interface ToolbeltOptions {
 	mode: BuildMode;
 	tools: ToolDescriptor[];
+	siteAccess?: SiteAccess;
 }
 
 declare module 'wxt' {
@@ -29,7 +30,7 @@ export default defineWxtModule<ToolbeltOptions>({
 	configKey: 'toolbelt',
 	setup(wxt, options) {
 		if (!options) throw new Error('wxt-kit: set `toolbelt: { mode, tools }` in wxt.config.ts');
-		const { mode, tools } = options;
+		const { mode, tools, siteAccess = 'per-tool' } = options;
 
 		wxt.hook('entrypoints:found', (_wxt, infos) => {
 			for (const tool of tools) {
@@ -53,7 +54,7 @@ export default defineWxtModule<ToolbeltOptions>({
 
 		wxt.hook('build:manifestGenerated', (_wxt, manifest) => {
 			// WXT expects the manifest object mutated in place; applyTools may drop keys, so remove those too.
-			const next = applyTools(manifest, tools, mode);
+			const next = applyTools(manifest, tools, mode, siteAccess);
 			for (const key of Object.keys(manifest) as (keyof typeof manifest)[]) if (!(key in next)) delete manifest[key];
 			Object.assign(manifest, next);
 		});

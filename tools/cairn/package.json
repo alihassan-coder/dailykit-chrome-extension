@@ -5,7 +5,8 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./entries/*": "./src/entries/*"
+		"./entries/*": "./src/entries/*",
+		"./panel": "./src/panel.tsx"
 	},
 	"scripts": {
 		"typecheck": "tsc -p ."

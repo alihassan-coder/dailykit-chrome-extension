@@ -6,12 +6,16 @@ Toolbelt is one browser extension that holds many **tools**. The same tool code 
 
 ```
 apps/                     one WXT project per product that ships
-  toolbelt/               the bundle: every tool, side panel, dashboard, popup
+  toolbelt/               the bundle: every tool, side panel, dashboard
+    shell/                shared app code (tool list, page start-up)
   cairn/                  Cairn standalone
 tools/                    one package per tool
-  cairn/
-    src/index.ts          the ToolDescriptor (plain data, see below)
-    src/entries/          WXT entry files (content scripts, pages) the apps pick up
+  cairn/                  chat history for Claude and ChatGPT
+  color-picker/           pick colours on screen, formats, contrast
+  grayscale/              black-and-white mode for any site
+    src/index.ts          each tool's descriptor (build-time, plain data)
+    src/panel.tsx         its side-panel screen
+    src/entries/          its page scripts
 packages/
   core/                   tool contract, registry, storage, migrations, messaging
   ui/                     theme tokens, components, shadow-root helpers
@@ -32,7 +36,8 @@ These are enforced by lint (`pnpm lint`) and package `exports`, not by memory.
 4. **Page-world code is isolated.** Files under a tool's `main-world/` run inside the website. They may not import extension APIs, React, storage or anything outside `main-world/`.
 5. **Descriptors are plain data.** `src/index.ts` of a tool has no top-level browser calls, because the build imports it in Node.
 6. **Every visual value is a theme token.** No hard-coded colours, sizes or radii in tools. See `packages/ui`.
-7. **Stable ids.** A tool id, a feature id and a storage key never change once shipped. Data changes go through numbered migrations.
+7. **No WXT auto-import folders in apps.** WXT auto-imports anything in an app's `components/`, `composables/`, `hooks/` or `utils/` folder, which once pulled every tool panel into a 5 kB page script. Shared app code lives in `shell/` and is imported explicitly.
+8. **Stable ids.** A tool id, a feature id and a storage key never change once shipped. Data changes go through numbered migrations.
 
 ## Bundle vs standalone
 

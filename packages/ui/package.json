@@ -5,7 +5,9 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./styles.css": "./src/styles/ui.css"
+		"./styles.css": "./src/styles/ui.css",
+		"./fonts.css": "./src/styles/fonts.css",
+		"./storage": "./src/storage.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc -p ."
@@ -13,10 +15,15 @@
 	"dependencies": {
 		"react": "19.3.1",
 		"react-dom": "19.3.1",
-		"radix-ui": "1.8.1"
+		"radix-ui": "1.8.1",
+		"@toolbelt/core": "workspace:*",
+		"@fontsource-variable/schibsted-grotesk": "5.3.0",
+		"@fontsource-variable/source-serif-4": "5.3.1",
+		"lucide-react": "1.66.0"
 	},
 	"devDependencies": {
 		"@types/react": "19.3.0",
-		"@types/react-dom": "19.3.0"
+		"@types/react-dom": "19.3.0",
+		"wxt": "0.21.5"
 	}
 }

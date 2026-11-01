@@ -2,6 +2,8 @@
 import type { ToolDescriptor } from '@toolbelt/core';
 
 export type BuildMode = 'bundle' | 'standalone';
+/** Bundle only. 'all': ask for every site once at install (personal Toolbelt). 'per-tool': optional, asked per tool. */
+export type SiteAccess = 'all' | 'per-tool';
 
 /** The manifest fields these transforms read and write. */
 export interface ManifestSlice {
@@ -18,14 +20,16 @@ export const scriptFile = (toolId: string, scriptId: string) => `content-scripts
 const unique = <T>(xs: T[]) => [...new Set(xs)];
 
 /**
- * Bundle: tool sites become optional (asked for when a tool is switched on, never an install-time or
- * update-time escalation) and tool content scripts leave the manifest (the background registers them).
+ * Bundle: tool content scripts leave the manifest (the background registers them for tools that are on).
+ * Site access is either every site at install ('all') or each tool's sites as optional permissions, asked
+ * for when the tool is switched on ('per-tool', never an install- or update-time escalation).
  * Standalone: the manifest WXT generated already lists them statically; only tool permissions are added.
  */
 export function applyTools<M extends ManifestSlice>(
 	manifest: M,
 	tools: ToolDescriptor[],
-	mode: BuildMode
+	mode: BuildMode,
+	siteAccess: SiteAccess = 'per-tool'
 ): M & ManifestSlice {
 	const out: M & ManifestSlice = { ...manifest };
 	const toolPerms = tools.flatMap((t) => t.permissions);
@@ -45,7 +49,8 @@ export function applyTools<M extends ManifestSlice>(
 	if (hosts.length) out.host_permissions = hosts;
 	else delete out.host_permissions;
 
-	out.optional_host_permissions = unique([...(manifest.optional_host_permissions ?? []), ...toolHosts]);
+	if (siteAccess === 'all') out.host_permissions = unique([...hosts, '<all_urls>']);
+	else out.optional_host_permissions = unique([...(manifest.optional_host_permissions ?? []), ...toolHosts]);
 	out.permissions = unique([...(manifest.permissions ?? []), 'scripting', ...toolPerms]);
 	return out;
 }

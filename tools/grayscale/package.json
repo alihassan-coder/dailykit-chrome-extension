@@ -1,0 +1,26 @@
+{
+	"name": "@toolbelt/tool-grayscale",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./panel": "./src/panel.tsx",
+		"./entries/*": "./src/entries/*"
+	},
+	"scripts": {
+		"typecheck": "tsc -p ."
+	},
+	"dependencies": {
+		"@toolbelt/core": "workspace:*",
+		"@toolbelt/ui": "workspace:*",
+		"lucide-react": "1.66.0",
+		"react": "19.3.1",
+		"react-dom": "19.3.1"
+	},
+	"devDependencies": {
+		"wxt": "0.21.5",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0"
+	}
+}

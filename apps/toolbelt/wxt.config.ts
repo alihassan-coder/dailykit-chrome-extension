@@ -1,5 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import { cairn } from '@toolbelt/tool-cairn';
+import { colorPicker } from '@toolbelt/tool-color-picker';
+import { grayscale } from '@toolbelt/tool-grayscale';
 import { defineConfig } from 'wxt';
 import type {} from '@toolbelt/wxt-kit'; // types for the `toolbelt` config key
 
@@ -7,7 +9,8 @@ import type {} from '@toolbelt/wxt-kit'; // types for the `toolbelt` config key
 export default defineConfig({
 	modules: ['@wxt-dev/module-react', '@toolbelt/wxt-kit'],
 	manifestVersion: 3, // also for Firefox (WXT defaults Firefox to MV2)
-	toolbelt: { mode: 'bundle', tools: [cairn] },
+	// Personal build: every site at install, so new tools (LinkedIn, GitHub, ...) just work.
+	toolbelt: { mode: 'bundle', siteAccess: 'all', tools: [cairn, colorPicker, grayscale] },
 	vite: () => ({ plugins: [tailwindcss()] }),
 	manifest: {
 		name: 'Toolbelt',
