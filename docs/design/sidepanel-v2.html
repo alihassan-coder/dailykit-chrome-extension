@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Toolbelt side panel v2</title>
+<style>
+/* Side panel v2: native-feeling, dense, Chrome-like. Search on top, tool toolbar on the right edge. */
+:root {
+	--bg: #f8f9fa; --surface: #ffffff; --hover: #f1f3f4; --line: #e3e5e8; --ink: #1f2328; --muted: #5f6368;
+	--accent: #0b57d0; --accent-soft: #d3e3fd; --ok: #188038; --warn: #b06000;
+	--font: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+}
+.dark { --bg: #1f1f1f; --surface: #282a2c; --hover: #333537; --line: #3c4043; --ink: #e3e3e3; --muted: #9aa0a6; --accent: #a8c7fa; --accent-soft: #0842a0; --ok: #6dd58c; --warn: #f9ab00; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: #c9cdd2; font: 13px/1.4 var(--font); display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.frame { width: 360px; height: 640px; background: var(--bg); color: var(--ink); border-radius: 12px; overflow: hidden; display: grid; grid-template-columns: 1fr 44px; grid-template-rows: 44px 1fr; box-shadow: 0 4px 16px rgb(0 0 0 / .15); font-family: var(--font); }
+.frame.wide { width: 520px; }
+.cap { width: 100%; font: 12px var(--font); color: #3c4043; margin: -12px 0 0; }
+
+/* Top bar: search fills the width */
+.top { grid-column: 1 / 2; display: flex; align-items: center; gap: 6px; padding: 6px 4px 6px 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.search { flex: 1; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; background: var(--hover); border-radius: 15px; color: var(--muted); }
+.search svg { flex: none; }
+.search span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+kbd { font: 11px var(--font); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; background: var(--surface); }
+.icon-btn { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 15px; color: var(--muted); }
+.icon-btn:hover { background: var(--hover); }
+
+/* Right toolbar */
+.rail { grid-column: 2; grid-row: 1 / 3; border-left: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; }
+.rail .logo { width: 20px; height: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin: 4px 0 10px; }
+.rail .logo i { border-radius: 2px; background: var(--ink); } .rail .logo i:nth-child(2) { background: var(--accent); } .rail .logo i:nth-child(3) { opacity: .45; } .rail .logo i:nth-child(4) { opacity: .2; }
+.tool { position: relative; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; color: var(--muted); }
+.tool.on { background: var(--accent-soft); color: var(--accent); }
+.tool.on::after { content: ''; position: absolute; right: -6px; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--accent); }
+.rail .spacer { flex: 1; }
+
+/* Content */
+.main { grid-column: 1; overflow: hidden; display: flex; flex-direction: column; }
+.head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 6px; }
+.head h1 { margin: 0; font-size: 14px; font-weight: 600; }
+.head .sub { color: var(--muted); font-size: 12px; }
+.section { padding: 4px 12px 10px; display: grid; gap: 8px; }
+.label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+.row { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 8px; border-radius: 6px; }
+.row:hover { background: var(--hover); }
+.row .k { width: 34px; color: var(--muted); font-size: 12px; }
+.row code { flex: 1; font: 12.5px ui-monospace, 'Cascadia Mono', Menlo, monospace; }
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.btn { height: 32px; border-radius: 16px; border: 0; padding: 0 14px; font: 500 13px var(--font); display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+.btn.primary { background: var(--accent); color: var(--surface); }
+.btn.tonal { background: var(--accent-soft); color: var(--accent); }
+.btn.text { background: transparent; color: var(--accent); }
+.swatch { display: flex; align-items: center; gap: 10px; }
+.swatch .chip { width: 40px; height: 40px; border-radius: 10px; background: #2e55e6; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .08); }
+.swatch b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.grid i { aspect-ratio: 1; border-radius: 4px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .08); }
+.pills { display: flex; gap: 6px; }
+.pill { flex: 1; border-radius: 8px; padding: 6px 8px; font-size: 12px; }
+.status { margin-top: auto; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Agent chat */
+.msg-user { align-self: flex-end; max-width: 85%; background: var(--accent-soft); color: var(--ink); border-radius: 14px 14px 4px 14px; padding: 6px 10px; }
+.msg-ai { line-height: 1.45; }
+.step { display: flex; gap: 6px; color: var(--muted); font-size: 12px; align-items: flex-start; }
+.step b { color: var(--ok); font-weight: 600; }
+.approve { border: 1px solid var(--accent); background: var(--surface); border-radius: 10px; padding: 10px; display: grid; gap: 6px; }
+.approve .what { font-weight: 600; }
+.approve .where { color: var(--muted); font-size: 12px; }
+.approve .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.chat { display: flex; flex-direction: column; gap: 8px; padding: 6px 12px; overflow: hidden; flex: 1; }
+.composer { margin: 0 8px 8px; display: flex; align-items: flex-end; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 6px 6px 6px 12px; }
+.composer span { flex: 1; color: var(--muted); padding: 4px 0; }
+.model { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); padding: 2px 8px; border-radius: 10px; background: var(--hover); }
+</style>
+</head>
+<body>
+
+<!-- Icons -->
+<svg width="0" height="0" style="position:absolute">
+	<symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+	<symbol id="more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="19" r="1.8" fill="currentColor"/></symbol>
+	<symbol id="gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+	<symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+	<symbol id="agent" viewBox="0 0 20 20"><path d="M8 6.5 16.5 10l-3.6 1.3-1.3 3.6L8 6.5Z" fill="currentColor"/><circle cx="4" cy="15.5" r="1.4" fill="currentColor" opacity=".4"/><circle cx="3.2" cy="9.8" r="1.1" fill="currentColor" opacity=".6"/><circle cx="8.5" cy="3" r=".9" fill="currentColor" opacity=".8"/></symbol>
+	<symbol id="cairn" viewBox="0 0 20 20" fill="currentColor"><rect x="7" y="2.5" width="6" height="4" rx="2"/><rect x="4.5" y="8" width="10" height="4.5" rx="2.25" opacity=".8"/><rect x="2.5" y="14" width="15" height="4" rx="2" opacity=".6"/></symbol>
+	<symbol id="picker" viewBox="0 0 20 20"><circle cx="14.6" cy="5.4" r="3.1" fill="currentColor"/><path d="m9.9 7.9 2.2 2.2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M10.4 9.6 5.2 14.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M3.6 15.6c.5.9.9 1.5.9 2a.9.9 0 1 1-1.8 0c0-.5.4-1.1.9-2Z" fill="currentColor" opacity=".6"/></symbol>
+	<symbol id="bw" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 3a7 7 0 0 1 0 14V3Z" fill="currentColor"/></symbol>
+	<symbol id="copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+	<symbol id="send" viewBox="0 0 24 24"><path d="M4 12 20 4l-6 16-3-7-7-1Z" fill="currentColor"/></symbol>
+</svg>
+
+<template id="rail">
+	<nav class="rail">
+		<div class="logo"><i></i><i></i><i></i><i></i></div>
+		<div class="tool" data-t="agent"><svg width="18" height="18"><use href="#agent"/></svg></div>
+		<div class="tool" data-t="cairn"><svg width="18" height="18"><use href="#cairn"/></svg></div>
+		<div class="tool" data-t="picker"><svg width="18" height="18"><use href="#picker"/></svg></div>
+		<div class="tool" data-t="bw"><svg width="18" height="18"><use href="#bw"/></svg></div>
+		<div class="spacer"></div>
+		<div class="tool"><svg width="18" height="18"><use href="#lock"/></svg></div>
+		<div class="tool"><svg width="18" height="18"><use href="#gear"/></svg></div>
+	</nav>
+</template>
+<template id="top">
+	<div class="top">
+		<div class="search"><svg width="16" height="16"><use href="#search"/></svg><span>Search tools and actions</span><kbd>Ctrl K</kbd></div>
+		<div class="icon-btn"><svg width="18" height="18"><use href="#more"/></svg></div>
+	</div>
+</template>
+
+<!-- 1. Colour picker, 360 px light -->
+<div class="frame" data-active="picker">
+	<main class="main">
+		<div class="head"><h1>Colour picker</h1><span class="sub">24 saved</span></div>
+		<div class="section">
+			<div class="swatch"><div class="chip"></div><div><b>#2E55E6</b><div class="sub" style="color:var(--muted);font-size:12px">AA on white · 5.9:1</div></div></div>
+			<button class="btn primary">Pick from screen</button>
+		</div>
+		<div class="section">
+			<div class="label">Formats</div>
+			<div class="list">
+				<div class="row"><span class="k">HEX</span><code>#2E55E6</code><svg width="16" height="16" style="color:var(--muted)"><use href="#copy"/></svg></div>
+				<div class="row"><span class="k">RGB</span><code>rgb(46, 85, 230)</code><svg width="16" height="16" style="color:var(--muted)"><use href="#copy"/></svg></div>
+				<div class="row"><span class="k">HSL</span><code>hsl(227, 79%, 54%)</code><svg width="16" height="16" style="color:var(--muted)"><use href="#copy"/></svg></div>
+			</div>
+		</div>
+		<div class="section">
+			<div class="label">Recent</div>
+			<div class="grid">
+				<i style="background:#2e55e6"></i><i style="background:#ff5500"></i><i style="background:#188038"></i><i style="background:#f9ab00"></i><i style="background:#7a3d8f"></i><i style="background:#1f2328"></i><i style="background:#e3e5e8"></i><i style="background:#d93025"></i><i style="background:#0b57d0"></i><i style="background:#a8c7fa"></i>
+			</div>
+		</div>
+		<div class="status"><span class="dot"></span>Synced just now</div>
+	</main>
+</div>
+
+<!-- 2. Browser agent, 360 px light -->
+<div class="frame" data-active="agent">
+	<main class="main">
+		<div class="head"><h1>Browser agent</h1><span class="model">Claude Opus 5.5 ▾</span></div>
+		<div class="chat">
+			<div class="msg-user">Find the pricing page and tell me the cheapest plan</div>
+			<div class="step"><b>✓</b>Read the page</div>
+			<div class="step"><b>✓</b>Found link “Pricing”</div>
+			<div class="approve">
+				<div class="where">The agent wants to</div>
+				<div class="what">Click link “Pricing”</div>
+				<div class="where">on example.com</div>
+				<div class="acts"><button class="btn primary">Allow once</button><button class="btn tonal">Always on this site</button><button class="btn text">Decline</button></div>
+			</div>
+		</div>
+		<div class="composer"><span>Ask about this page…</span><div class="icon-btn" style="background:var(--accent);color:var(--surface)"><svg width="16" height="16"><use href="#send"/></svg></div></div>
+	</main>
+</div>
+
+<!-- 3. Same panel, dark and wide (520 px): content reflows to two columns -->
+<div class="frame wide dark" data-active="picker">
+	<main class="main">
+		<div class="head"><h1>Colour picker</h1><span class="sub">24 saved</span></div>
+		<div class="section two">
+			<div style="display:grid;gap:8px">
+				<div class="swatch"><div class="chip"></div><div><b>#2E55E6</b><div style="color:var(--muted);font-size:12px">AA on white · 5.9:1</div></div></div>
+				<button class="btn primary">Pick from screen</button>
+				<div class="pills"><div class="pill" style="background:#2e55e6;color:#fff">Aa 5.9</div><div class="pill" style="background:#2e55e6;color:#000">Aa 3.6</div></div>
+			</div>
+			<div class="list">
+				<div class="row"><span class="k">HEX</span><code>#2E55E6</code></div>
+				<div class="row"><span class="k">RGB</span><code>rgb(46, 85, 230)</code></div>
+				<div class="row"><span class="k">HSL</span><code>hsl(227, 79%, 54%)</code></div>
+			</div>
+		</div>
+		<div class="section">
+			<div class="label">Recent</div>
+			<div class="grid" style="grid-template-columns:repeat(16,1fr)">
+				<i style="background:#2e55e6"></i><i style="background:#ff5500"></i><i style="background:#188038"></i><i style="background:#f9ab00"></i><i style="background:#7a3d8f"></i><i style="background:#e3e3e3"></i><i style="background:#3c4043"></i><i style="background:#d93025"></i><i style="background:#0b57d0"></i><i style="background:#a8c7fa"></i>
+			</div>
+		</div>
+		<div class="status"><span class="dot"></span>Synced just now</div>
+	</main>
+</div>
+
+<script>
+	for (const f of document.querySelectorAll('.frame')) {
+		f.prepend(document.getElementById('top').content.cloneNode(true));
+		f.append(document.getElementById('rail').content.cloneNode(true));
+		f.querySelector(`.tool[data-t="${f.dataset.active}"]`)?.classList.add('on');
+	}
+</script>
+</body>
+</html>
