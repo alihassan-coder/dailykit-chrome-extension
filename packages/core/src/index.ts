@@ -5,4 +5,5 @@ export * from './tool-storage.ts';
 export * from './color.ts';
 export * from './ai-keys.ts';
 export * from './account-messages.ts';
+export * from './memory-messages.ts';
 export * from './format.ts';

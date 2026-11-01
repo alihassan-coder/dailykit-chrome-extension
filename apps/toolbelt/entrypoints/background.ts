@@ -1,6 +1,18 @@
 /// <reference types="@toolbelt/wxt-kit/registry" />
-import { createSettingsStore, enabledToolIds, isAccountRequest, syncToolScripts, type Settings } from '@toolbelt/core';
+// First, before anything loads mem0: it needs a `process`, with its telemetry switched off.
+import '../shims/process.ts';
+import {
+	ACCOUNT_STATE_KEY,
+	createSettingsStore,
+	enabledToolIds,
+	isAccountRequest,
+	isMemoryRequest,
+	syncToolScripts,
+	type AccountState,
+	type Settings
+} from '@toolbelt/core';
 import { createAccountService, neonSql } from '@toolbelt/db';
+import { createMemoryService } from '@toolbelt/memory';
 import { localArea } from '@toolbelt/ui/storage';
 import registry from 'virtual:toolbelt/registry';
 import { browser } from 'wxt/browser';
@@ -36,6 +48,9 @@ const account = createAccountService({
 	bakedUrl: __TB_DATABASE_URL__
 });
 
+// The agent's long-term memory (mem0), encrypted with the same data key and stored in the same database.
+const memory = createMemoryService({ local: browser.storage.local, account });
+
 const SYNC_DELAY_MS = 1500;
 let pushTimer: ReturnType<typeof setTimeout> | undefined;
 function syncSoon() {
@@ -61,13 +76,20 @@ export default defineBackground(() => {
 	}
 	settings.subscribe((s) => void syncScripts(s));
 
-	browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-		if (!isAccountRequest(message)) return;
-		void account.handle(message).then(sendResponse);
+	// Memories are only for Toolbelt's own pages (side panel, dashboard), never for scripts running in a website.
+	const fromOwnPage = (sender: { url?: string }) => Boolean(sender.url?.startsWith(browser.runtime.getURL('/')));
+	browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+		if (isAccountRequest(message)) void account.handle(message).then(sendResponse);
+		else if (isMemoryRequest(message) && fromOwnPage(sender)) void memory.handle(message).then(sendResponse);
+		else return;
 		return true; // answer asynchronously
 	});
 
 	browser.storage.onChanged.addListener((changes, area) => {
+		// Just unlocked: download and decrypt the agent's memories now, not on the first question.
+		const state = changes[ACCOUNT_STATE_KEY] as { oldValue?: AccountState; newValue?: AccountState } | undefined;
+		if (area === 'session' && state?.newValue?.state === 'unlocked' && state.oldValue?.state !== 'unlocked')
+			void memory.sync();
 		if (area !== 'local') return;
 		void account.noteLocalChanges(Object.keys(changes)).then((changed) => changed && syncSoon());
 	});
@@ -76,7 +98,7 @@ export default defineBackground(() => {
 	void browser.alarms.create('tb:sync', { periodInMinutes: 5 });
 	void browser.alarms.create('tb:auto-lock', { periodInMinutes: 15 });
 	browser.alarms.onAlarm.addListener((alarm) => {
-		if (alarm.name === 'tb:sync') void account.sync();
+		if (alarm.name === 'tb:sync') void account.sync().then(() => memory.sync());
 		if (alarm.name === 'tb:auto-lock') void account.autoLock();
 	});
 });

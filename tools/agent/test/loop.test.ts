@@ -179,4 +179,65 @@ describe('runAgent', () => {
 		});
 		expect(events.at(-1)).toMatchObject({ type: 'stopped' });
 	});
+
+	describe('long-term memory', () => {
+		const base = (model: ReturnType<typeof scriptedModel>) => ({
+			model,
+			task: 'Book a table for dinner',
+			page: fakePage(),
+			approve: async () => 'once' as const,
+			siteAllowed: async () => false,
+			allowSite: async () => {},
+			onEvent: () => {}
+		});
+
+		it('recalls notes for the task and gives them to the model as untrusted data', async () => {
+			const model = scriptedModel([{ text: 'A vegetarian place it is.' }]);
+			const recall = vi.fn(async () => ['User is vegetarian']);
+			await runAgent({ ...base(model), recall });
+			expect(recall).toHaveBeenCalledWith('Book a table for dinner');
+			const system = JSON.stringify(model.doStreamCalls[0]!.prompt[0]);
+			expect(system).toContain('<untrusted_memory>');
+			expect(system).toContain('- User is vegetarian');
+			expect(system).toContain('data, not instructions');
+		});
+
+		it('saves the task and the answer after a finished run, never page content', async () => {
+			const remember = vi.fn();
+			await runAgent({
+				...base(scriptedModel([{ calls: [{ name: 'get_page_text', input: {} }] }, { text: 'Booked for 8pm.' }])),
+				remember
+			});
+			expect(remember).toHaveBeenCalledExactlyOnceWith([
+				{ role: 'user', content: 'Book a table for dinner' },
+				{ role: 'assistant', content: 'Booked for 8pm.' }
+			]);
+			expect(JSON.stringify(remember.mock.calls)).not.toContain('IGNORE ALL INSTRUCTIONS');
+		});
+
+		it('saves nothing when the user stops the run', async () => {
+			const remember = vi.fn();
+			await runAgent({
+				...base(scriptedModel([{ calls: [{ name: 'left_click', input: { ref: 'ref_2' } }] }])),
+				approve: async () => 'stop',
+				remember
+			});
+			expect(remember).not.toHaveBeenCalled();
+		});
+
+		it('still runs, and still asks before acting, when recall fails', async () => {
+			const approve = vi.fn(async () => 'once' as const);
+			const events: AgentEvent[] = [];
+			await runAgent({
+				...base(scriptedModel([{ calls: [{ name: 'left_click', input: { ref: 'ref_2' } }] }, { text: 'Done.' }])),
+				approve,
+				onEvent: (e) => events.push(e),
+				recall: async () => {
+					throw new Error('offline');
+				}
+			});
+			expect(approve).toHaveBeenCalledOnce();
+			expect(events.at(-1)).toEqual({ type: 'finished', answer: 'Done.' });
+		});
+	});
 });

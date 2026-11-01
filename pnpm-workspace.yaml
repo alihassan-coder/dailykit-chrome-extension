@@ -7,6 +7,8 @@ packages:
 allowBuilds:
   esbuild: true
   unrs-resolver: false
+  # A mem0ai peer pnpm installs automatically; Toolbelt never uses it (aliased to a stub in the build).
+  better-sqlite3: false
 
 minimumReleaseAgeExclude:
   - '@electric-sql/pglite@0.5.14'

@@ -1,0 +1,20 @@
+{
+	"name": "@toolbelt/memory",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc -p ."
+	},
+	"dependencies": {
+		"@toolbelt/core": "workspace:*",
+		"@toolbelt/db": "workspace:*",
+		"mem0ai": "3.3.1"
+	},
+	"devDependencies": {
+		"@types/node": "24.19.2"
+	}
+}

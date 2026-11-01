@@ -9,6 +9,7 @@ export const DASHBOARD_SECTIONS = [
 	{ id: 'appearance', title: 'Appearance', keywords: ['theme', 'accent', 'colour', 'dark mode', 'font', 'size'] },
 	{ id: 'general', title: 'General', keywords: ['start', 'shortcuts', 'reset'] },
 	{ id: 'ai', title: 'AI providers', keywords: ['api key', 'anthropic', 'openai', 'grok', 'gemini', 'claude', 'gpt'] },
+	{ id: 'memory', title: 'Memory', keywords: ['remember', 'memories', 'agent', 'mem0', 'forget', 'recall'] },
 	{ id: 'data', title: 'Data and sync', keywords: ['neon', 'backup', 'export', 'import', 'account'] },
 	{ id: 'about', title: 'About', keywords: ['version', 'licence', 'credits'] }
 ] as const;

@@ -7,7 +7,8 @@ type Mode = 'light' | 'dark';
 // Each preset has a light-mode and a dark-mode value, tuned for contrast against that mode's surface.
 export const ACCENT_COLORS: Record<AccentPreset, { name: string; light: string; dark: string; onDark: string }> = {
 	toolbelt: { name: 'Toolbelt blue', light: '#4467f5', dark: '#8ea3ff', onDark: '#0b1540' },
-	cobalt: { name: 'Cobalt', light: '#2e55e6', dark: '#7e98ff', onDark: '#0d1430' },
+	// Stored as 'cobalt' for older settings; now an ocean blue so it is clearly different from Toolbelt blue.
+	cobalt: { name: 'Ocean', light: '#0a7ea4', dark: '#5cc8eb', onDark: '#04222d' },
 	moss: { name: 'Moss', light: '#2f6f4e', dark: '#6cc28f', onDark: '#0b1d13' },
 	plum: { name: 'Plum', light: '#7a3d8f', dark: '#c893dc', onDark: '#22102a' },
 	copper: { name: 'Copper', light: '#a3521c', dark: '#e39a62', onDark: '#2a1407' },

@@ -1,5 +1,6 @@
 // The agent loop: one model turn at a time. Reads run straight away; every action goes through the policy,
 // then the user's approval, then runs on the page. Runs in the side panel, so closing it stops the run.
+import { memoryContext, type ChatTurn } from '@toolbelt/core';
 import { streamText, type LanguageModel, type ModelMessage, type ToolResultPart } from 'ai';
 import type { ActionResult, PageAction } from './actuation.ts';
 import { decide, isBlocked, siteOf, type Proposal } from './policy.ts';
@@ -53,6 +54,10 @@ export interface RunOptions {
 	history?: ModelMessage[];
 	signal?: AbortSignal;
 	maxSteps?: number;
+	/** Long-term memory: notes relevant to this task, added to the system prompt as untrusted data. */
+	recall?: (task: string) => Promise<string[]>;
+	/** Called once a run finishes with an answer: the task and the answer, never page content. */
+	remember?: (turns: ChatTurn[]) => void;
 }
 
 const NOT_EXECUTED = 'Not executed: an earlier action in this turn did not go ahead.';
@@ -100,6 +105,17 @@ const KIND: Partial<Record<AgentToolName, Proposal['kind']>> = {
 export async function runAgent(opts: RunOptions): Promise<ModelMessage[]> {
 	const { page, onEvent } = opts;
 	const messages: ModelMessage[] = [...(opts.history ?? []), { role: 'user', content: opts.task }];
+	// Memory is a help, never a blocker: if recall fails the run goes ahead without it.
+	const notes = opts.recall ? await opts.recall(opts.task).catch(() => []) : [];
+	const system = SYSTEM_PROMPT + memoryContext(notes);
+	const finish = (answer: string) => {
+		onEvent({ type: 'finished', answer });
+		if (answer.trim())
+			opts.remember?.([
+				{ role: 'user', content: opts.task },
+				{ role: 'assistant', content: answer }
+			]);
+	};
 	const runOrigins = new Set<string>();
 	try {
 		runOrigins.add(new URL(await page.url()).origin);
@@ -110,7 +126,7 @@ export async function runAgent(opts: RunOptions): Promise<ModelMessage[]> {
 	for (let step = 0; step < (opts.maxSteps ?? 25); step++) {
 		const result = streamText({
 			model: opts.model,
-			system: SYSTEM_PROMPT,
+			system,
 			messages,
 			tools: agentTools,
 			toolChoice: 'auto',
@@ -125,7 +141,7 @@ export async function runAgent(opts: RunOptions): Promise<ModelMessage[]> {
 		messages.push(...(await result.response).messages);
 
 		if (!calls.length) {
-			onEvent({ type: 'finished', answer: text });
+			finish(text);
 			return messages;
 		}
 
@@ -238,7 +254,7 @@ export async function runAgent(opts: RunOptions): Promise<ModelMessage[]> {
 			});
 		}
 		if (finished !== null) {
-			onEvent({ type: 'finished', answer: finished });
+			finish(finished);
 			return messages;
 		}
 	}

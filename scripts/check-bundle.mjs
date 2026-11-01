@@ -11,9 +11,11 @@ import { join, relative } from 'node:path';
 
 const KB = 1024;
 const budgets = [
-	// Loads once per browser session, not per page. ~190 KB today: Neon's driver (it ships its pool and
-	// WebSocket code even though only HTTP is used) and Argon2 in WebAssembly.
-	{ match: /^background\.js$/, max: 250 * KB, why: 'background: database, encryption and sync' },
+	// Loads once per browser session, not per page. ~190 KB: Neon's driver (it ships its pool and WebSocket
+	// code even though only HTTP is used) and Argon2 in WebAssembly. Plus ~410 KB for agent memory: the mem0
+	// SDK is one file that keeps every provider it supports (its factories name them all), so it cannot be
+	// tree-shaken; its own OpenAI/axios clients are already stubbed out (apps/toolbelt/shims).
+	{ match: /^background\.js$/, max: 700 * KB, why: 'background: database, encryption, sync and agent memory' },
 	{ match: /^content-scripts\/.+-ui\.js$/, max: 350 * KB, why: 'in-page UI (React)' },
 	{ match: /^content-scripts\/.+\.js$/, max: 15 * KB, why: 'page script, loads on every matching site' }
 ];

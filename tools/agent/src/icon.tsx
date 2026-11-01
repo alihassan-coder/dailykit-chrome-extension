@@ -1,11 +1,11 @@
-// Browser agent's mark: a pointer with the trail of its last moves.
+// Browser agent's mark: a pointer, the cursor that acts for you, with a gold spark of intelligence beside it.
+import { GOLD, ToolTile } from '@toolbelt/ui';
+
 export default function AgentIcon({ size = 20 }: { size?: number }) {
 	return (
-		<svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-			<path d="M8 6.5 16.5 10l-3.6 1.3-1.3 3.6L8 6.5Z" fill="currentColor" />
-			<circle cx="4" cy="15.5" r="1.4" fill="currentColor" opacity="0.4" />
-			<circle cx="3.2" cy="9.8" r="1.1" fill="currentColor" opacity="0.6" />
-			<circle cx="8.5" cy="3" r="0.9" fill="currentColor" opacity="0.8" />
-		</svg>
+		<ToolTile size={size} from="#a28bff" to="#4b2fc4">
+			<path d="M5.6 4.4v10.4l2.7-2.6 1.9 4 1.9-.85-1.9-3.95h3.8Z" strokeWidth="1.1" />
+			<path d="M14.9 3.1q.35 1.9 2.25 2.25-1.9.35-2.25 2.25-.35-1.9-2.25-2.25 1.9-.35 2.25-2.25Z" fill={GOLD} />
+		</ToolTile>
 	);
 }

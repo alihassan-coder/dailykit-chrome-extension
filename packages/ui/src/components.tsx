@@ -1,5 +1,6 @@
 // The small set of controls every Toolbelt screen is built from. Styled only with theme tokens.
-import { useId, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { ToolTile } from './ToolTile.tsx';
 
 const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(' ');
 
@@ -115,7 +116,7 @@ export function IconButton({
 	);
 }
 
-/** A tool's square tile with its logo (or initials until it has one), echoing the four-square logo. */
+/** A tool's logo (which brings its own coloured tile), or an initials tile until it has one. Switched-off tools fade. */
 export function ToolMark({
 	name,
 	icon,
@@ -127,6 +128,16 @@ export function ToolMark({
 	active?: boolean;
 	size?: 'sm' | 'md' | 'lg';
 }) {
+	if (icon) {
+		return (
+			<span
+				aria-hidden="true"
+				className={cx('grid shrink-0 transition-[filter,opacity]', active === false && 'opacity-50 grayscale')}
+			>
+				{icon}
+			</span>
+		);
+	}
 	const initials = name
 		.split(/\s+/)
 		.map((w) => w[0])
@@ -143,7 +154,7 @@ export function ToolMark({
 				active ? 'bg-accent text-on-accent' : 'bg-soft text-ink'
 			)}
 		>
-			{icon ?? initials}
+			{initials}
 		</span>
 	);
 }
@@ -155,60 +166,14 @@ export function Kbd({ children }: { children: ReactNode }) {
 	);
 }
 
-// The Holster mark: three tools tucked into a belt strap, the amber one is the tool in use.
-// Spec: docs/research/design/01-extension-logo.md. Below 24 px it switches to the hand-fitted 16 px master.
-const HOLSTER_16 = [
-	'..........AA....',
-	'.........AAA....',
-	'.........AA.....',
-	'....WW..AAA.....',
-	'....WW..AA......',
-	'...WW..AAA......',
-	'...WW..AA.......',
-	'................',
-	'WWWWWWWWWWWWWWWW',
-	'WWWWWWWWWWWWWWWW',
-	'................',
-	'..WW..AA........'
-];
-
+// The Toolbelt mark: a belt strap and the tool hanging from it make a T, on the same tile as every tool's logo.
+// The toolbar PNGs come from scripts/render-icons.py, so keep the two in step.
 export function Logo({ size = 20 }: { size?: number }) {
-	const id = useId();
-	if (size < 24) {
-		return (
-			<svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges" aria-hidden="true">
-				<clipPath id={id}>
-					<rect width="16" height="16" rx="4" />
-				</clipPath>
-				<g clipPath={`url(#${id})`}>
-					<rect width="16" height="16" fill="#4467f5" />
-					{HOLSTER_16.flatMap((row, y) =>
-						[...row].map((c, x) =>
-							c === '.' ? null : (
-								<rect key={`${x}-${y}`} x={x} y={y + 2} width="1" height="1" fill={c === 'A' ? '#ffc53d' : '#fff'} />
-							)
-						)
-					)}
-				</g>
-			</svg>
-		);
-	}
 	return (
-		<svg width={size} height={size} viewBox="16 16 96 96" aria-hidden="true">
-			<clipPath id={id}>
-				<rect x="16" y="16" width="96" height="96" rx="24" />
-			</clipPath>
-			<g clipPath={`url(#${id})`}>
-				<rect x="16" y="16" width="96" height="96" fill="#4467f5" />
-				<g transform="translate(24 0) skewX(-18)">
-					<rect x="30" y="40" width="14" height="60" rx="7" fill="#fff" />
-					<rect x="54" y="26" width="14" height="74" rx="7" fill="#ffc53d" />
-					<rect x="78" y="46" width="14" height="54" rx="7" fill="#fff" />
-				</g>
-				<rect x="16" y="66" width="96" height="26" fill="#4467f5" />
-				<rect x="16" y="70" width="96" height="18" fill="#fff" />
-			</g>
-		</svg>
+		<ToolTile size={size} from="#6d8bff" to="#2a45d6">
+			<rect x="3.6" y="5" width="12.8" height="3.8" rx="1.9" />
+			<rect x="8.1" y="5" width="3.8" height="10.6" rx="1.9" />
+		</ToolTile>
 	);
 }
 

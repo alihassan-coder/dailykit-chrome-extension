@@ -6,7 +6,7 @@ export function AboutSection() {
 	return (
 		<section aria-labelledby="about-title" className="grid gap-4">
 			<div className="flex items-center gap-3">
-				<Logo size={36} />
+				<Logo size={48} />
 				<div>
 					<h2 id="about-title" className="text-xl font-semibold">
 						Toolbelt
@@ -20,9 +20,9 @@ export function AboutSection() {
 					const Icon = icons[t.id];
 					return (
 						<div key={t.id} className="flex items-center gap-3 border-t border-line py-3 first:border-t-0">
-							<ToolMark name={t.name} icon={Icon ? <Icon size={16} /> : undefined} />
+							<ToolMark name={t.name} icon={Icon ? <Icon size={32} /> : undefined} />
 							<div className="min-w-0">
-								<p className="font-medium">{t.name}</p>
+								<p className="text-lg font-semibold">{t.name}</p>
 								<p className="truncate text-sm text-muted">{t.description}</p>
 							</div>
 						</div>

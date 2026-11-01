@@ -64,9 +64,18 @@ describe('planPull', () => {
 
 describe('syncsKey', () => {
 	it('syncs settings and tool data, keeps device state local', () => {
-		for (const k of ['tb:settings', 'tb:ai:keys', 'tb:color-picker:history', 'tb:grayscale:state'])
-			expect(syncsKey(k)).toBe(true);
-		for (const k of ['tb:session:key', 'tb:account', 'tb:sync:meta', 'tb:db-url', 'tb:shell:last-tool', 'other']) {
+		const synced = ['tb:settings', 'tb:ai:keys', 'tb:color-picker:history', 'tb:grayscale:state', 'tb:agent:model'];
+		for (const k of [...synced, 'tb:agent:allowed-sites']) expect(syncsKey(k)).toBe(true);
+		for (const k of [
+			'tb:session:key',
+			'tb:account',
+			'tb:sync:meta',
+			'tb:db-url',
+			'tb:shell:last-tool',
+			'tb:agent:models',
+			'tb:ai:models',
+			'other'
+		]) {
 			expect(syncsKey(k)).toBe(false);
 		}
 	});

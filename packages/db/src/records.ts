@@ -43,8 +43,17 @@ export async function pushRecords(
 	return latest;
 }
 
-/** Everything changed after `since` (server ms), decrypted. Pass 0 to fetch everything. */
-export async function pullRecords(db: Sql, userId: string, dataKey: CryptoKey, since = 0): Promise<PulledRecord[]> {
+/**
+ * Everything changed after `since` (server ms), decrypted. Pass 0 to fetch everything. Pass `collection` to
+ * fetch only that one, so settings sync does not download (and decrypt) the agent's memories each time.
+ */
+export async function pullRecords(
+	db: Sql,
+	userId: string,
+	dataKey: CryptoKey,
+	since = 0,
+	collection?: string
+): Promise<PulledRecord[]> {
 	const rows = await db.query<{
 		collection: string;
 		id: string;
@@ -55,8 +64,9 @@ export async function pullRecords(db: Sql, userId: string, dataKey: CryptoKey, s
 		`SELECT collection, id, ciphertext, deleted, (extract(epoch FROM updated_at) * 1000)::bigint AS ms
 		 FROM toolbelt.records
 		 WHERE user_id = $1 AND updated_at > to_timestamp($2::double precision / 1000)
+		   AND ($3::text IS NULL OR collection = $3)
 		 ORDER BY updated_at`,
-		[userId, since]
+		[userId, since, collection ?? null]
 	);
 	const out: PulledRecord[] = [];
 	for (const r of rows) {
@@ -81,6 +91,16 @@ export function planPull(pulled: PulledRecord[], dirty: ReadonlySet<string>) {
 	return { apply, keptLocal, since };
 }
 
-/** Storage keys that sync. Device-only state (session, account, sync bookkeeping, last tool) stays local. */
-const LOCAL_ONLY = [/^tb:session/, /^tb:account/, /^tb:sync:/, /^tb:db-url$/, /^tb:shell:last-tool$/];
+/**
+ * Storage keys that sync. Device-only state (session, account, sync bookkeeping, last tool) stays local,
+ * and so do caches each device can download again (the model lists).
+ */
+const LOCAL_ONLY = [
+	/^tb:session/,
+	/^tb:account/,
+	/^tb:sync:/,
+	/^tb:db-url$/,
+	/^tb:shell:last-tool$/,
+	/^tb:(agent|ai):models$/
+];
 export const syncsKey = (key: string) => key.startsWith('tb:') && !LOCAL_ONLY.some((r) => r.test(key));

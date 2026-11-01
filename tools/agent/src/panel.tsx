@@ -1,5 +1,6 @@
 // The browser agent in the side panel: ask in plain words, watch each step, approve every action.
-import { featureOn, resolveApiKeys, toolValue, type ApiKeys } from '@toolbelt/core';
+import { ModelPicker, useModels } from '@toolbelt/ai';
+import { featureOn, toolValue, type ChatTurn, type MemoryRequest, type MemoryResponse } from '@toolbelt/core';
 import { Button, EmptyState, IconButton, localArea, useSettings } from '@toolbelt/ui';
 import type { ModelMessage } from 'ai';
 import { Ban, Check, CircleSlash, Globe, KeyRound, RotateCcw, Send, ShieldAlert, Square, X } from 'lucide-react';
@@ -7,22 +8,30 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { browser } from 'wxt/browser';
 import { runAgent, type AgentEvent, type ApprovalAnswer, type ApprovalRequest } from './loop.ts';
 import { activeTab, pageApi } from './page-api.ts';
-import { ModelPicker } from './ModelPicker.tsx';
-import { available, refresh, resolveCache, type ModelCache } from './models.ts';
-import { createModel, defaultChoice, type ModelChoice } from './providers.ts';
 
-const keysStore = toolValue(localArea, 'ai', 'keys', resolveApiKeys);
 const asSites = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : []);
 const allowedSites = toolValue(localArea, 'agent', 'allowed-sites', asSites);
 // Tool packages cannot see the app's generated page types; the dashboard is options.html in the Toolbelt app.
 const dashboardUrl = (section: string) =>
 	(browser.runtime as unknown as { getURL(path: string): string }).getURL(`/options.html#${section}`);
 
-const modelCache = toolValue(localArea, 'agent', 'models', resolveCache);
+// Long-term memory lives in the background (encrypted in the user's database). The agent asks it for notes
+// before a run and hands it the finished chat afterwards; the background decides whether memory is on.
+const askMemory = (req: MemoryRequest) => browser.runtime.sendMessage(req) as Promise<MemoryResponse | undefined>;
+/** Recall must not hold up the run: past this, the agent starts without notes. */
+export const RECALL_WAIT_MS = 4000;
 
-const choiceStore = toolValue(localArea, 'agent', 'model', (v) =>
-	typeof v === 'object' && v !== null && 'provider' in v && 'model' in v ? (v as ModelChoice) : null
-);
+export async function recallNotes(query: string): Promise<string[]> {
+	const notes = askMemory({ type: 'memory:recall', query, limit: 8 }).then((r) =>
+		r?.ok ? (r.items ?? []).map((m) => m.text) : []
+	);
+	const late = new Promise<string[]>((resolve) => setTimeout(() => resolve([]), RECALL_WAIT_MS));
+	return Promise.race([notes.catch(() => []), late]);
+}
+
+export function rememberChat(messages: ChatTurn[]) {
+	void askMemory({ type: 'memory:add', messages }).catch(() => {});
+}
 
 type Entry =
 	| { kind: 'user'; text: string }
@@ -72,11 +81,9 @@ function ApprovalCard({ request, onAnswer }: { request: ApprovalRequest; onAnswe
 
 export default function AgentPanel() {
 	const { settings } = useSettings();
-	const [keys, setKeys] = useState<ApiKeys | null>(null);
-	const [choice, setChoice] = useState<ModelChoice | null>(null);
-	const [cache, setCache] = useState<ModelCache>({});
-	const [refreshing, setRefreshing] = useState(false);
-	const [modelNote, setModelNote] = useState<string | null>(null);
+	// Keys, live model lists and this tool's model choice, shared with every AI tool.
+	const ai = useModels('agent');
+	const { keys, choice } = ai;
 	const [entries, setEntries] = useState<Entry[]>([]);
 	const [task, setTask] = useState('');
 	const [running, setRunning] = useState(false);
@@ -85,35 +92,6 @@ export default function AgentPanel() {
 	const answer = useRef<((a: ApprovalAnswer) => void) | null>(null);
 	const abort = useRef<AbortController | null>(null);
 	const end = useRef<HTMLDivElement>(null);
-
-	async function loadModels(k: ApiKeys, force = false) {
-		setRefreshing(true);
-		const { cache: next, errors } = await refresh(await modelCache.get(), k, { force });
-		await modelCache.set(next);
-		setCache(next);
-		setRefreshing(false);
-		const failed = Object.entries(errors).map(([p, e]) => `${p}: ${e}`);
-		setModelNote(failed.length ? `Couldn't refresh ${failed.join('; ')}` : null);
-		return next;
-	}
-
-	useEffect(() => {
-		async function start(k: ApiKeys) {
-			setKeys(k);
-			const saved = await choiceStore.get();
-			const cached = await modelCache.get();
-			setCache(cached);
-			const pick = (c: ModelCache) =>
-				setChoice((current) => {
-					const keep = current ?? saved;
-					return keep && k[keep.provider] ? keep : defaultChoice(available(c, k));
-				});
-			pick(cached);
-			pick(await loadModels(k));
-		}
-		void keysStore.get().then(start);
-		return keysStore.subscribe((k) => void start(k));
-	}, []);
 
 	useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [entries, pending]);
 
@@ -167,12 +145,22 @@ export default function AgentPanel() {
 		abort.current = new AbortController();
 		try {
 			history.current = await runAgent({
-				model: createModel(choice, keys),
+				model: ai.model(),
 				task: text,
 				history: history.current,
 				page: pageApi(tab.id, tab.windowId, { screenshots: featureOn(settings, 'agent', 'screenshots') }),
 				signal: abort.current.signal,
 				onEvent,
+				recall: async (query) => {
+					const notes = await recallNotes(query);
+					if (notes.length)
+						setEntries((l) => [
+							...l,
+							{ kind: 'notice', text: `Using ${notes.length} ${notes.length === 1 ? 'note' : 'notes'} from memory.` }
+						]);
+					return notes;
+				},
+				remember: rememberChat,
 				siteAllowed: async (site) => (await allowedSites.get()).includes(site),
 				allowSite: async (site) => void (await allowedSites.update((s) => [...new Set([...s, site])])),
 				approve: (request) =>
@@ -206,15 +194,12 @@ export default function AgentPanel() {
 		<div className="grid gap-3">
 			<div className="flex items-center justify-between gap-2">
 				<ModelPicker
-					models={available(cache, keys)}
+					models={ai.models}
 					choice={choice}
-					onChoose={(c) => {
-						setChoice(c);
-						void choiceStore.set(c);
-					}}
-					onRefresh={() => void loadModels(keys, true)}
-					refreshing={refreshing}
-					note={modelNote}
+					onChoose={ai.choose}
+					onRefresh={ai.refresh}
+					refreshing={ai.refreshing}
+					note={ai.note}
 				/>
 				<IconButton
 					label="New chat"

@@ -1,11 +1,16 @@
-// Colour picker's mark: a pipette (bulb, collar, glass tube) with a drop of colour at its tip.
+// Colour picker's mark: a pipette (bulb, collar, tapered glass) leaning to the left, a gold drop at its tip.
+import { GOLD, ToolTile } from '@toolbelt/ui';
+
 export default function ColorPickerIcon({ size = 20 }: { size?: number }) {
 	return (
-		<svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden="true">
-			<circle cx="14.6" cy="5.4" r="3.1" fill="currentColor" />
-			<path d="m9.9 7.9 2.2 2.2" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
-			<path d="M10.4 9.6 5.2 14.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-			<path d="M3.6 15.6c.5.9.9 1.5.9 2a.9.9 0 1 1-1.8 0c0-.5.4-1.1.9-2Z" fill="currentColor" opacity="0.6" />
-		</svg>
+		<ToolTile size={size} from="#ff7eb0" to="#b8215c">
+			{/* Drawn upright, then turned 45° around the centre. */}
+			<g transform="rotate(45 10 10)">
+				<rect x="8.4" y="2.4" width="3.2" height="4.6" rx="1.6" />
+				<rect x="7.3" y="6.9" width="5.4" height="1.9" rx="0.95" />
+				<path d="M9 8.7h2l-.35 6.1a.65.65 0 0 1-1.3 0Z" />
+				<circle cx="10" cy="17.1" r="1.3" fill={GOLD} />
+			</g>
+		</ToolTile>
 	);
 }

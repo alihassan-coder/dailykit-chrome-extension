@@ -42,9 +42,9 @@ function ToolRow({
 				<span className="cursor-grab text-muted" aria-hidden="true">
 					<GripVertical size={16} />
 				</span>
-				<ToolMark name={tool.name} icon={Icon ? <Icon size={18} /> : undefined} active={on} />
+				<ToolMark name={tool.name} icon={Icon ? <Icon size={36} /> : undefined} active={on} />
 				<div className="min-w-0 flex-1">
-					<p className="font-semibold">{tool.name}</p>
+					<p className="text-lg font-semibold">{tool.name}</p>
 					<p className="truncate text-sm text-muted">{tool.description}</p>
 				</div>
 				<span className="hidden rounded-full bg-soft px-2.5 py-0.5 text-xs text-muted sm:inline">

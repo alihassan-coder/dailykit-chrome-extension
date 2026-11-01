@@ -1,7 +1,7 @@
 // The side panel: search on top, the chosen tool in the middle, and a slim toolbar on the right edge that
 // opens to show names. Keyboard: Ctrl/Cmd+K search, [ toggles the toolbar, arrow keys move in the toolbar.
 import { enabledToolIds, setTheme, timeAgo, toolValue } from '@toolbelt/core';
-import { Button, EmptyState, IconButton, Logo, Tooltip, localArea, useAccount, useSettings } from '@toolbelt/ui';
+import { Button, EmptyState, Logo, Tooltip, localArea, useAccount, useSettings } from '@toolbelt/ui';
 import { Lock, PanelRightClose, PanelRightOpen, Settings2 } from 'lucide-react';
 import { Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { HeaderSearch } from '../../shell/HeaderSearch.tsx';
@@ -53,17 +53,32 @@ function RailAction({
 	hint?: string;
 	ariaExpanded?: boolean;
 }) {
-	return (
-		<Tooltip label={label} hint={hint} side="left" disabled={expanded}>
-			<IconButton
-				label={label}
+	if (expanded) {
+		// Open toolbar: a full-width row, icon and label side by side, like the tool rows above.
+		return (
+			<button
+				type="button"
 				aria-expanded={ariaExpanded}
 				onClick={onClick}
-				className={expanded ? 'w-full justify-start gap-2.5 px-2' : ''}
+				className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2 text-muted transition-colors hover:bg-soft hover:text-ink"
+			>
+				<span className="grid size-5 shrink-0 place-items-center">{icon}</span>
+				<span className="min-w-0 flex-1 truncate text-left text-base">{short}</span>
+				{hint && <kbd className="rounded-sm border border-line px-1 text-[10px]">{hint}</kbd>}
+			</button>
+		);
+	}
+	return (
+		<Tooltip label={label} hint={hint} side="left">
+			<button
+				type="button"
+				aria-label={label}
+				aria-expanded={ariaExpanded}
+				onClick={onClick}
+				className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-soft hover:text-ink"
 			>
 				{icon}
-				{expanded && <span className="text-base">{short}</span>}
-			</IconButton>
+			</button>
 		</Tooltip>
 	);
 }
@@ -128,21 +143,18 @@ export default function App() {
 						ref={search}
 						commands={commands}
 						shortcut={`${isMac ? '⌘' : 'Ctrl'} K`}
-						renderIcon={(c) =>
-							c.id.startsWith('tool:') ? (
-								<span className="text-muted">
-									<ToolIcon id={c.id.slice(5)} size={16} />
-								</span>
-							) : null
-						}
+						renderIcon={(c) => (c.id.startsWith('tool:') ? <ToolIcon id={c.id.slice(5)} size={18} /> : null)}
 					/>
 				</header>
 
 				<main className="min-h-0 flex-1 overflow-y-auto">
 					{active && Panel ? (
 						<div key={active.id} className="tb-enter mx-auto grid max-w-[560px] gap-3 p-3">
-							<div className="flex items-baseline justify-between gap-2">
-								<h1 className="text-lg font-semibold">{active.name}</h1>
+							<div className="flex items-center justify-between gap-2">
+								<h1 className="flex min-w-0 items-center gap-2.5 text-lg font-semibold">
+									<ToolIcon id={active.id} size={26} />
+									<span className="truncate">{active.name}</span>
+								</h1>
 								<SyncStatus />
 							</div>
 							<Suspense fallback={null}>
@@ -174,7 +186,7 @@ export default function App() {
 					}`}
 				>
 					<div className={`mb-2 flex h-9 items-center gap-2 ${expanded ? 'px-1.5' : 'justify-center'}`}>
-						<Logo size={expanded ? 24 : 22} />
+						<Logo size={26} />
 						{expanded && <span className="text-base font-semibold">Toolbelt</span>}
 					</div>
 					<div role="tablist" aria-orientation="vertical" className="flex flex-col gap-1">
@@ -197,7 +209,7 @@ export default function App() {
 											expanded ? 'w-full px-2' : 'w-9 justify-center'
 										} ${current ? 'bg-accent-soft text-accent' : 'text-muted hover:bg-soft hover:text-ink'}`}
 									>
-										<ToolIcon id={tool.id} size={20} />
+										<ToolIcon id={tool.id} size={22} />
 										{expanded && <span className="truncate text-base">{tool.name}</span>}
 										{current && (
 											<span

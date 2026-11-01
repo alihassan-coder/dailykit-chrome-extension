@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CommandPalette } from '../src/CommandPalette.tsx';
 import { Segmented, Switch, ToolMark } from '../src/components.tsx';
+import { Select } from '../src/Select.tsx';
 
 afterEach(cleanup);
 
@@ -89,5 +90,31 @@ describe('CommandPalette', () => {
 		const { input } = setup();
 		fireEvent.change(input, { target: { value: 'zzz' } });
 		expect(screen.getByText('Nothing matches “zzz”.')).toBeTruthy();
+	});
+});
+
+describe('Select', () => {
+	it('shows the chosen option with its icon, and is named for screen readers', () => {
+		render(
+			<Select
+				label="Side panel opens with"
+				value="cairn"
+				onChange={() => {}}
+				options={[
+					{ value: 'last', label: 'The tool I used last' },
+					{ value: 'cairn', label: 'Cairn', icon: <svg data-testid="cairn-logo" /> }
+				]}
+			/>
+		);
+		const trigger = screen.getByRole('combobox', { name: 'Side panel opens with' });
+		expect(trigger.textContent).toContain('Cairn');
+		expect(screen.getByTestId('cairn-logo')).toBeTruthy();
+	});
+});
+
+describe('ToolMark', () => {
+	it('fades a switched-off tool’s logo', () => {
+		const { container } = render(<ToolMark name="Cairn" icon={<svg />} active={false} />);
+		expect(container.firstElementChild?.className).toContain('grayscale');
 	});
 });

@@ -6,6 +6,7 @@ import AgentIcon from '@toolbelt/tool-agent/icon';
 import CairnIcon from '@toolbelt/tool-cairn/icon';
 import ColorPickerIcon from '@toolbelt/tool-color-picker/icon';
 import GrayscaleIcon from '@toolbelt/tool-grayscale/icon';
+import ProfileLensIcon from '@toolbelt/tool-profile-lens/icon';
 import { localArea } from '@toolbelt/ui';
 import { browser } from 'wxt/browser';
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
@@ -19,14 +20,16 @@ export const panels: Record<string, LazyExoticComponent<ComponentType>> = {
 	agent: lazy(() => import('@toolbelt/tool-agent/panel')),
 	cairn: lazy(() => import('@toolbelt/tool-cairn/panel')),
 	'color-picker': lazy(() => import('@toolbelt/tool-color-picker/panel')),
-	grayscale: lazy(() => import('@toolbelt/tool-grayscale/panel'))
+	grayscale: lazy(() => import('@toolbelt/tool-grayscale/panel')),
+	'profile-lens': lazy(() => import('@toolbelt/tool-profile-lens/panel'))
 };
 
 export const icons: Record<string, ComponentType<{ size?: number }>> = {
 	agent: AgentIcon,
 	cairn: CairnIcon,
 	'color-picker': ColorPickerIcon,
-	grayscale: GrayscaleIcon
+	grayscale: GrayscaleIcon,
+	'profile-lens': ProfileLensIcon
 };
 
 /** Words people may type in the command palette to find a tool. */
@@ -34,7 +37,8 @@ export const keywords: Record<string, string[]> = {
 	agent: ['ai', 'assistant', 'claude', 'gpt', 'grok', 'gemini', 'automate', 'ask'],
 	cairn: ['chat history', 'claude', 'chatgpt', 'save'],
 	'color-picker': ['eyedropper', 'hex', 'rgb', 'contrast'],
-	grayscale: ['grayscale', 'greyscale', 'monochrome', 'focus']
+	grayscale: ['grayscale', 'greyscale', 'monochrome', 'focus'],
+	'profile-lens': ['linkedin', 'icp', 'lead', 'prospect', 'recruit', 'analyze', 'profile']
 };
 
 export const settingsStore = createSettingsStore(localArea, tools);

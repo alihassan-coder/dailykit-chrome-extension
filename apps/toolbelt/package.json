@@ -13,16 +13,19 @@
 		"postinstall": "wxt prepare"
 	},
 	"dependencies": {
+		"@noble/hashes": "2.4.0",
 		"@toolbelt/core": "workspace:*",
-		"@toolbelt/ui": "workspace:*",
+		"@toolbelt/db": "workspace:*",
+		"@toolbelt/memory": "workspace:*",
+		"@toolbelt/tool-agent": "workspace:*",
 		"@toolbelt/tool-cairn": "workspace:*",
-		"react": "19.3.1",
-		"react-dom": "19.3.1",
 		"@toolbelt/tool-color-picker": "workspace:*",
 		"@toolbelt/tool-grayscale": "workspace:*",
+		"@toolbelt/tool-profile-lens": "workspace:*",
+		"@toolbelt/ui": "workspace:*",
 		"lucide-react": "1.66.0",
-		"@toolbelt/db": "workspace:*",
-		"@toolbelt/tool-agent": "workspace:*"
+		"react": "19.3.1",
+		"react-dom": "19.3.1"
 	},
 	"devDependencies": {
 		"@tailwindcss/vite": "4.3.3",

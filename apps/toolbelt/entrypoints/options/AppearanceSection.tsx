@@ -19,9 +19,9 @@ import type { ReactNode } from 'react';
 
 function Field({ label, hint, children }: { label: string; hint: string; children: ReactNode }) {
 	return (
-		<div className="grid gap-3 border-t border-line py-5 first:border-t-0 sm:grid-cols-[200px_1fr] sm:items-center">
-			<div>
-				<p className="font-medium">{label}</p>
+		<div className="grid gap-3 border-t border-line py-5 first:border-t-0 sm:grid-cols-[240px_1fr] sm:items-center sm:gap-8">
+			<div className="grid gap-0.5">
+				<p className="text-base font-medium">{label}</p>
 				<p className="text-sm text-muted">{hint}</p>
 			</div>
 			<div>{children}</div>
@@ -32,7 +32,7 @@ function Field({ label, hint, children }: { label: string; hint: string; childre
 function Group({ title, children }: { title: string; children: ReactNode }) {
 	return (
 		<section className="grid gap-2">
-			<h3 className="text-sm font-semibold text-muted">{title}</h3>
+			<h3 className="px-1 text-base font-semibold">{title}</h3>
 			<div className="rounded-lg border border-line bg-surface px-5">{children}</div>
 		</section>
 	);
@@ -42,7 +42,7 @@ function Preview() {
 	return (
 		<div className="grid gap-3 rounded-lg border border-line bg-bg p-4" aria-label="Preview">
 			<div className="flex items-center gap-3 rounded-md border border-line bg-surface p-3">
-				<ToolMark name="Cairn" icon={<CairnIcon size={18} />} active />
+				<ToolMark name="Cairn" icon={<CairnIcon size={36} />} active />
 				<div className="min-w-0 flex-1">
 					<p className="font-semibold">Cairn</p>
 					<p className="truncate text-sm text-muted">Save private Claude and ChatGPT chats</p>

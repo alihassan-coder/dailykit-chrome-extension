@@ -1,0 +1,29 @@
+{
+	"name": "@toolbelt/ai",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc -p ."
+	},
+	"dependencies": {
+		"@toolbelt/core": "workspace:*",
+		"@toolbelt/ui": "workspace:*",
+		"ai": "7.0.159",
+		"@ai-sdk/anthropic": "4.0.94",
+		"@ai-sdk/openai": "4.0.106",
+		"@ai-sdk/xai": "5.0.35",
+		"@ai-sdk/google": "4.0.109",
+		"lucide-react": "1.66.0",
+		"react": "19.3.1",
+		"react-dom": "19.3.1"
+	},
+	"devDependencies": {
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"wxt": "0.21.5"
+	}
+}

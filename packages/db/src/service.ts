@@ -165,7 +165,7 @@ export function createAccountService(opts: ServiceOptions) {
 	async function pull(sql: Sql, account: SavedAccount, key: CryptoKey, everything = false) {
 		const sinceRaw = (await local.get(K.since))[K.since];
 		const since = everything || typeof sinceRaw !== 'number' ? 0 : sinceRaw;
-		const pulled = (await pullRecords(sql, account.userId, key, since)).filter((r) => r.collection === KV_COLLECTION);
+		const pulled = await pullRecords(sql, account.userId, key, since, KV_COLLECTION);
 		const plan = planPull(pulled, await dirtyKeys());
 		for (const r of plan.apply) applying.add(r.id);
 		try {
@@ -333,7 +333,14 @@ export function createAccountService(opts: ServiceOptions) {
 		}
 	}
 
-	return { handle, sync, noteLocalChanges, autoLock, publish, state };
+	/** Who is signed in and their data key, while unlocked. For other background services (memory). */
+	async function unlocked(): Promise<{ userId: string; key: CryptoKey } | null> {
+		const account = await savedAccount();
+		const key = account && (await dataKey());
+		return account && key ? { userId: account.userId, key } : null;
+	}
+
+	return { handle, sync, noteLocalChanges, autoLock, publish, state, unlocked, database };
 }
 
 function describe(e: unknown): string {

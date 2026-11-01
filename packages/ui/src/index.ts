@@ -7,3 +7,5 @@ export * from './palette.ts';
 export * from './CommandPalette.tsx';
 export * from './account.ts';
 export * from './Tooltip.tsx';
+export * from './ToolTile.tsx';
+export * from './Select.tsx';

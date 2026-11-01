@@ -13,7 +13,8 @@ const PAGE_WORLD_FORBIDDEN = [
 	'radix-ui',
 	'wxt/browser',
 	'@toolbelt/ui',
-	'@toolbelt/db'
+	'@toolbelt/db',
+	'@toolbelt/memory'
 ];
 
 export default tseslint.config(
@@ -28,7 +29,7 @@ export default tseslint.config(
 		}
 	},
 	{
-		files: ['**/*.tsx'],
+		files: ['**/*.tsx', '**/use*.ts'],
 		plugins: { 'react-hooks': reactHooks },
 		rules: reactHooks.configs.recommended.rules
 	},
@@ -49,6 +50,8 @@ export default tseslint.config(
 				{ type: 'core', pattern: 'packages/core' },
 				{ type: 'ui', pattern: 'packages/ui' },
 				{ type: 'db', pattern: 'packages/db' },
+				{ type: 'memory', pattern: 'packages/memory' },
+				{ type: 'ai', pattern: 'packages/ai' },
 				{ type: 'wxt-kit', pattern: 'packages/wxt-kit' }
 			]
 		},
@@ -68,18 +71,28 @@ export default tseslint.config(
 							allow: { to: { element: { type: 'tool', captured: { tool: '{{from.element.captured.tool}}' } } } }
 						},
 						{
-							from: { element: { types: { anyOf: ['core', 'ui', 'db', 'wxt-kit'] } } },
+							from: { element: { types: { anyOf: ['core', 'ui', 'db', 'memory', 'ai', 'wxt-kit'] } } },
 							allow: { to: { element: { type: '{{from.element.type}}' } } }
 						},
 						// Rule 1-2: apps compose; tools use only core + ui; packages never reach up.
 						{
 							from: { element: { type: 'app' } },
-							allow: { to: { element: { types: { anyOf: ['tool', 'core', 'ui', 'db', 'wxt-kit'] } } } }
+							allow: { to: { element: { types: { anyOf: ['tool', 'core', 'ui', 'db', 'memory', 'ai', 'wxt-kit'] } } } }
 						},
-						{ from: { element: { type: 'tool' } }, allow: { to: { element: { types: { anyOf: ['core', 'ui'] } } } } },
+						{
+							from: { element: { type: 'tool' } },
+							allow: { to: { element: { types: { anyOf: ['core', 'ui', 'ai'] } } } }
+						},
+						// Shared AI (providers, model lists, model picker) is built on core and ui, for any tool to use.
+						{ from: { element: { type: 'ai' } }, allow: { to: { element: { types: { anyOf: ['core', 'ui'] } } } } },
 						{
 							from: { element: { types: { anyOf: ['ui', 'db', 'wxt-kit'] } } },
 							allow: { to: { element: { type: 'core' } } }
+						},
+						// Agent memory is built on the database package (same records, same encryption).
+						{
+							from: { element: { type: 'memory' } },
+							allow: { to: { element: { types: { anyOf: ['core', 'db'] } } } }
 						},
 						// External packages are fine; rules 3-4 below narrow them per context.
 						{ allow: { to: { module: { origin: 'external' } } } },
@@ -89,7 +102,7 @@ export default tseslint.config(
 			]
 		}
 	},
-	// Rule 3: only background code may touch the database package.
+	// Rule 3: only background code may touch the database package, or the agent memory built on it.
 	{
 		files: ['apps/**/*.{ts,tsx}', 'tools/**/*.{ts,tsx}'],
 		ignores: ['apps/*/entrypoints/background.ts', 'apps/*/entrypoints/background/**', 'tools/*/src/background/**'],
@@ -98,7 +111,12 @@ export default tseslint.config(
 				'error',
 				{
 					paths: [
-						{ name: '@toolbelt/db', message: 'Only background code may use the database (ARCHITECTURE.md rule 3).' }
+						{ name: '@toolbelt/db', message: 'Only background code may use the database (ARCHITECTURE.md rule 3).' },
+						{
+							name: '@toolbelt/memory',
+							message:
+								'Only background code may use agent memory; send memory messages instead (ARCHITECTURE.md rule 3).'
+						}
 					]
 				}
 			]
