@@ -25,6 +25,9 @@ export default defineConfig({
 		name: 'Toolbelt',
 		description: 'Your own browser tools, in one side panel.',
 		permissions: ['storage', 'alarms'],
+		// Argon2 (master password) runs as WebAssembly bundled in the extension. Chrome's default extension
+		// policy blocks compiling it; 'wasm-unsafe-eval' allows only that, not eval() or remote code.
+		content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';" },
 		minimum_chrome_version: '116',
 		action: { default_title: 'Toolbelt' },
 		browser_specific_settings: {

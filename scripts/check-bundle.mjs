@@ -3,6 +3,8 @@
 //      every page load.
 //   2. The database link from .env appears only in the background worker of the personal build, never in a
 //      page, a page script, or a sold app.
+//   3. Any product that ships WebAssembly allows it in its manifest's security policy. Chrome blocks it by
+//      default, and unit tests (Node) cannot see that, so the first sign would be a broken extension.
 // Run: node scripts/check-bundle.mjs
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -47,6 +49,17 @@ for (const app of readdirSync('apps')) {
 	if (!existsSync(out)) {
 		console.error(`No build for ${app}. Run pnpm build first.`);
 		process.exit(1);
+	}
+
+	const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'));
+	const csp = manifest.content_security_policy?.extension_pages ?? '';
+	const usesWasm = walk(out).some(
+		(p) => p.endsWith('.js') && /WebAssembly\.(compile|instantiate)/.test(readFileSync(p, 'utf8'))
+	);
+	if (usesWasm && !csp.includes("'wasm-unsafe-eval'")) {
+		fail(`${app} ships WebAssembly but its manifest CSP does not allow 'wasm-unsafe-eval'`);
+	} else if (usesWasm) {
+		console.log(`ok   ${app} ships WebAssembly and its manifest allows it`);
 	}
 
 	for (const path of walk(out)) {
