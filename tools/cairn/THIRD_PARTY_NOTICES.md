@@ -3,7 +3,7 @@
 ## o200k_base tokenizer (`src/vendor/o200k_base.js`)
 
 A bundled JavaScript implementation of the OpenAI `o200k_base` byte-pair-encoding tokenizer
-(the `gpt-tokenizer` project, MIT licensed). It is used only to *estimate* token counts locally;
+(the `gpt-tokenizer` project, MIT licensed). It is used only to _estimate_ token counts locally;
 no text is sent anywhere.
 
 MIT License — Copyright (c) the gpt-tokenizer authors. Permission is hereby granted, free of

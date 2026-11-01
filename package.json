@@ -16,9 +16,10 @@
 		"lint": "eslint . --max-warnings 0",
 		"test": "vitest run",
 		"format": "prettier --write .",
-		"check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+		"check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build",
 		"changeset": "changeset",
-		"e2e": "vitest run -c vitest.e2e.config.ts"
+		"e2e": "vitest run -c vitest.e2e.config.ts",
+		"format:check": "prettier --check ."
 	},
 	"devDependencies": {
 		"@changesets/cli": "3.0.3",

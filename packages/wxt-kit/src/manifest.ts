@@ -22,7 +22,11 @@ const unique = <T>(xs: T[]) => [...new Set(xs)];
  * update-time escalation) and tool content scripts leave the manifest (the background registers them).
  * Standalone: the manifest WXT generated already lists them statically; only tool permissions are added.
  */
-export function applyTools<M extends ManifestSlice>(manifest: M, tools: ToolDescriptor[], mode: BuildMode): M & ManifestSlice {
+export function applyTools<M extends ManifestSlice>(
+	manifest: M,
+	tools: ToolDescriptor[],
+	mode: BuildMode
+): M & ManifestSlice {
 	const out: M & ManifestSlice = { ...manifest };
 	const toolPerms = tools.flatMap((t) => t.permissions);
 

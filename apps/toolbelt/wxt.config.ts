@@ -6,6 +6,7 @@ import type {} from '@toolbelt/wxt-kit'; // types for the `toolbelt` config key
 // The Toolbelt bundle: every tool. Personal use (unpacked / unlisted); tools that are sold ship as standalone apps.
 export default defineConfig({
 	modules: ['@wxt-dev/module-react', '@toolbelt/wxt-kit'],
+	manifestVersion: 3, // also for Firefox (WXT defaults Firefox to MV2)
 	toolbelt: { mode: 'bundle', tools: [cairn] },
 	vite: () => ({ plugins: [tailwindcss()] }),
 	manifest: {

@@ -10,7 +10,13 @@ const cairn = defineTool({
 	hostMatches: ['https://claude.ai/*'],
 	permissions: ['storage', 'clipboardWrite'],
 	contentScripts: [
-		{ id: 'claude-main', entry: '/x/claude-main.ts', matches: ['https://claude.ai/*'], world: 'MAIN', runAt: 'document_start' }
+		{
+			id: 'claude-main',
+			entry: '/x/claude-main.ts',
+			matches: ['https://claude.ai/*'],
+			world: 'MAIN',
+			runAt: 'document_start'
+		}
 	],
 	features: []
 });
@@ -42,7 +48,11 @@ describe('applyTools (bundle)', () => {
 	});
 
 	it('drops empty keys instead of writing empty arrays', () => {
-		const only = applyTools({ host_permissions: ['https://claude.ai/*'], content_scripts: [{ js: [scriptFile('cairn', 'claude-main')] }] }, [cairn], 'bundle');
+		const only = applyTools(
+			{ host_permissions: ['https://claude.ai/*'], content_scripts: [{ js: [scriptFile('cairn', 'claude-main')] }] },
+			[cairn],
+			'bundle'
+		);
 		expect(only).not.toHaveProperty('host_permissions');
 		expect(only).not.toHaveProperty('content_scripts');
 	});

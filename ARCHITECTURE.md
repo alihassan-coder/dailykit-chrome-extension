@@ -36,11 +36,11 @@ These are enforced by lint (`pnpm lint`) and package `exports`, not by memory.
 
 ## Bundle vs standalone
 
-| | Bundle (`apps/toolbelt`) | Standalone (`apps/cairn`) |
-| --- | --- | --- |
-| Site access | `optional_host_permissions`, asked when the tool is switched on | `host_permissions`, shown at install |
-| Content scripts | registered at runtime by the background (`tb:<tool>:<script>`) | static in the manifest |
-| Switch tools on and off | yes, live from the dashboard | n/a |
+|                         | Bundle (`apps/toolbelt`)                                        | Standalone (`apps/cairn`)                |
+| ----------------------- | --------------------------------------------------------------- | ---------------------------------------- |
+| Site access             | `optional_host_permissions`, asked when the tool is switched on | content-script matches, shown at install |
+| Content scripts         | registered at runtime by the background (`tb:<tool>:<script>`)  | static in the manifest                   |
+| Switch tools on and off | yes, live from the dashboard                                    | n/a                                      |
 
 `wxt-kit` produces both from the same descriptor.
 

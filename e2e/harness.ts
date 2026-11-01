@@ -9,10 +9,27 @@ import puppeteer, { type Browser } from 'puppeteer-core';
 
 export function selfSignedCert(host: string) {
 	const dir = mkdtempSync(join(tmpdir(), 'tb-e2e-'));
-	execFileSync('openssl', [
-		'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', `/CN=${host}`,
-		'-addext', `subjectAltName=DNS:${host}`, '-keyout', join(dir, 'key.pem'), '-out', join(dir, 'cert.pem')
-	], { stdio: 'ignore' });
+	execFileSync(
+		'openssl',
+		[
+			'req',
+			'-x509',
+			'-newkey',
+			'rsa:2048',
+			'-nodes',
+			'-days',
+			'1',
+			'-subj',
+			`/CN=${host}`,
+			'-addext',
+			`subjectAltName=DNS:${host}`,
+			'-keyout',
+			join(dir, 'key.pem'),
+			'-out',
+			join(dir, 'cert.pem')
+		],
+		{ stdio: 'ignore' }
+	);
 	return { key: readFileSync(join(dir, 'key.pem')), cert: readFileSync(join(dir, 'cert.pem')) };
 }
 
@@ -29,12 +46,17 @@ export async function serveHtml(host: string, html: string): Promise<{ server: S
 
 export async function launchWithExtension(extensionDir: string, map: { host: string; port: number }): Promise<Browser> {
 	const executablePath = process.env.CHROME;
-	if (!executablePath) throw new Error('Set CHROME to a Chrome for Testing binary (npx @puppeteer/browsers install chrome@stable)');
+	if (!executablePath)
+		throw new Error('Set CHROME to a Chrome for Testing binary (npx @puppeteer/browsers install chrome@stable)');
 	return puppeteer.launch({
 		executablePath,
 		headless: true,
 		pipe: true,
 		enableExtensions: [extensionDir],
-		args: [`--host-resolver-rules=MAP ${map.host}:443 127.0.0.1:${map.port}`, '--ignore-certificate-errors', '--no-first-run']
+		args: [
+			`--host-resolver-rules=MAP ${map.host}:443 127.0.0.1:${map.port}`,
+			'--ignore-certificate-errors',
+			'--no-first-run'
+		]
 	});
 }

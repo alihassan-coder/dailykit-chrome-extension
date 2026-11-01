@@ -6,15 +6,33 @@ const tools = [
 		id: 'cairn',
 		hostMatches: ['https://claude.ai/*'],
 		contentScripts: [
-			{ id: 'claude-main', matches: ['https://claude.ai/*'], world: 'MAIN' as const, runAt: 'document_start' as const, js: ['content-scripts/cairn-claude-main.js'] },
-			{ id: 'claude-ui', matches: ['https://claude.ai/*'], world: 'ISOLATED' as const, runAt: 'document_idle' as const, js: ['content-scripts/cairn-claude-ui.js'] }
+			{
+				id: 'claude-main',
+				matches: ['https://claude.ai/*'],
+				world: 'MAIN' as const,
+				runAt: 'document_start' as const,
+				js: ['content-scripts/cairn-claude-main.js']
+			},
+			{
+				id: 'claude-ui',
+				matches: ['https://claude.ai/*'],
+				world: 'ISOLATED' as const,
+				runAt: 'document_idle' as const,
+				js: ['content-scripts/cairn-claude-ui.js']
+			}
 		]
 	},
 	{
 		id: 'notes',
 		hostMatches: ['https://example.com/*'],
 		contentScripts: [
-			{ id: 'page', matches: ['https://example.com/*'], world: 'ISOLATED' as const, runAt: 'document_idle' as const, js: ['content-scripts/notes-page.js'] }
+			{
+				id: 'page',
+				matches: ['https://example.com/*'],
+				world: 'ISOLATED' as const,
+				runAt: 'document_idle' as const,
+				js: ['content-scripts/notes-page.js']
+			}
 		]
 	}
 ];
@@ -53,7 +71,12 @@ describe('reconcileScripts', () => {
 
 	it('skips a tool whose site access was not granted', async () => {
 		const s = fakeScripting();
-		await reconcileScripts({ tools, enabled: ['cairn', 'notes'], hasAccess: async (m) => !m.includes('https://claude.ai/*'), scripting: s.api });
+		await reconcileScripts({
+			tools,
+			enabled: ['cairn', 'notes'],
+			hasAccess: async (m) => !m.includes('https://claude.ai/*'),
+			scripting: s.api
+		});
 		expect(s.ids()).toEqual(['tb:notes:page']);
 	});
 
@@ -72,7 +95,13 @@ describe('reconcileScripts', () => {
 	});
 
 	it('is idempotent and re-registers a script whose definition changed', async () => {
-		const stale = { id: 'tb:cairn:claude-ui', matches: ['https://claude.ai/*'], js: ['old.js'], world: 'ISOLATED' as const, runAt: 'document_idle' as const };
+		const stale = {
+			id: 'tb:cairn:claude-ui',
+			matches: ['https://claude.ai/*'],
+			js: ['old.js'],
+			world: 'ISOLATED' as const,
+			runAt: 'document_idle' as const
+		};
 		const s = fakeScripting([stale]);
 		await reconcileScripts({ tools, enabled: ['cairn'], hasAccess: allowAll, scripting: s.api });
 		await reconcileScripts({ tools, enabled: ['cairn'], hasAccess: allowAll, scripting: s.api });

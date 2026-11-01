@@ -6,6 +6,7 @@ import type {} from '@toolbelt/wxt-kit'; // types for the `toolbelt` config key
 // Cairn as its own extension, built from the same tool code as the Toolbelt bundle.
 export default defineConfig({
 	modules: ['@wxt-dev/module-react', '@toolbelt/wxt-kit'],
+	manifestVersion: 3, // also for Firefox (WXT defaults Firefox to MV2)
 	toolbelt: { mode: 'standalone', tools: [cairn] },
 	vite: () => ({ plugins: [tailwindcss()] }),
 	manifest: {

@@ -7,7 +7,9 @@ const base = (): ToolDescriptor => ({
 	description: 'test',
 	hostMatches: ['https://claude.ai/*'],
 	permissions: [],
-	contentScripts: [{ id: 'main', entry: '/x.ts', matches: ['https://claude.ai/*'], world: 'MAIN', runAt: 'document_start' }],
+	contentScripts: [
+		{ id: 'main', entry: '/x.ts', matches: ['https://claude.ai/*'], world: 'MAIN', runAt: 'document_start' }
+	],
 	features: [{ id: 'quote', title: 'Quote', description: '', defaultOn: true }]
 });
 

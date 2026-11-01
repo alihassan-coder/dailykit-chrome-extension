@@ -57,7 +57,9 @@ describe('page-world script', () => {
 
 describe('shadow-root UI (spike 2)', () => {
 	it('applies Toolbelt tokens inside the shadow root', async () => {
-		const style = await (await chip()).evaluate((el) => {
+		const style = await (
+			await chip()
+		).evaluate((el) => {
 			const s = getComputedStyle(el);
 			return { bg: s.backgroundColor, fontSize: s.fontSize, shadow: s.boxShadow };
 		});
@@ -101,15 +103,20 @@ describe('Radix popover in the shadow root (spike 3)', () => {
 
 	it('opens inside our shadow root, styled', async () => {
 		await (await chip()).click();
-		await page.waitForFunction(() => document.querySelector('toolbelt-cairn')?.shadowRoot?.querySelector('[data-probe="popover"]'));
+		await page.waitForFunction(() =>
+			document.querySelector('toolbelt-cairn')?.shadowRoot?.querySelector('[data-probe="popover"]')
+		);
 		expect(await popover()).toEqual({ inShadow: true, inBody: false, bg: 'rgb(255, 255, 255)' });
 	});
 
 	it('closes on a click outside, on the page', async () => {
 		await page.click('#outside');
-		await page.waitForFunction(() => !document.querySelector('toolbelt-cairn')?.shadowRoot?.querySelector('[data-probe="popover"]'), {
-			timeout: 3_000
-		});
+		await page.waitForFunction(
+			() => !document.querySelector('toolbelt-cairn')?.shadowRoot?.querySelector('[data-probe="popover"]'),
+			{
+				timeout: 3_000
+			}
+		);
 		expect((await popover()).inShadow).toBe(false);
 	});
 });
