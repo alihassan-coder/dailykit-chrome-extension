@@ -4,6 +4,7 @@ import '@toolbelt/ui/styles.css';
 import { SettingsProvider } from '@toolbelt/ui';
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AccountGate } from './AccountGate.tsx';
 import { settingsStore } from './tools.ts';
 
 export function mount(app: ReactNode) {
@@ -13,7 +14,7 @@ export function mount(app: ReactNode) {
 	createRoot(root).render(
 		<StrictMode>
 			<SettingsProvider store={settingsStore} themeTarget={document.documentElement}>
-				{app}
+				<AccountGate>{app}</AccountGate>
 			</SettingsProvider>
 		</StrictMode>
 	);

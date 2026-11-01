@@ -7,3 +7,6 @@ packages:
 allowBuilds:
   esbuild: true
   unrs-resolver: false
+
+minimumReleaseAgeExclude:
+  - '@electric-sql/pglite@0.5.14'

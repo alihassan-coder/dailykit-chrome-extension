@@ -8,5 +8,13 @@
 	},
 	"scripts": {
 		"typecheck": "tsc -p ."
+	},
+	"dependencies": {
+		"@toolbelt/core": "workspace:*",
+		"@neondatabase/serverless": "1.2.0",
+		"hash-wasm": "4.12.0"
+	},
+	"devDependencies": {
+		"@electric-sql/pglite": "0.5.14"
 	}
 }

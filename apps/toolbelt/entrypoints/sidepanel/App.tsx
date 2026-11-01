@@ -1,15 +1,16 @@
 // The side panel: a rail of switched-on tools, the chosen tool, and a status line.
 // Keyboard: Alt+1…9 switches tools, Ctrl/Cmd+K opens the command palette.
-import { enabledToolIds, toolValue } from '@toolbelt/core';
+import { enabledToolIds, timeAgo, toolValue } from '@toolbelt/core';
 import {
 	Button,
 	CommandPalette,
 	EmptyState,
 	IconButton,
 	Kbd,
+	localArea,
 	Logo,
 	ToolMark,
-	localArea,
+	useAccount,
 	useSettings
 } from '@toolbelt/ui';
 import { Search, Settings2 } from 'lucide-react';
@@ -24,6 +25,28 @@ const isMac = navigator.platform.toLowerCase().includes('mac');
 function ToolIcon({ id, size }: { id: string; size?: number }) {
 	const Icon = icons[id];
 	return Icon ? <Icon size={size} /> : null;
+}
+
+/** One line of sync status, so you always know your data is safe. */
+function SyncStatus() {
+	const { account } = useAccount();
+	const synced = account?.state === 'unlocked';
+	const paused = synced && account.syncError;
+	return (
+		<button
+			type="button"
+			onClick={() => openDashboard('data')}
+			title={paused ? account.syncError! : 'Data and sync'}
+			className="flex items-center gap-1.5 hover:text-ink"
+		>
+			<span className={`size-1.5 rounded-full ${paused ? 'bg-warn' : 'bg-ok'}`} aria-hidden="true" />
+			{!synced
+				? 'Saved on this device'
+				: paused
+					? 'Sync paused, saved on this device'
+					: `Synced ${timeAgo(account.lastSync)}`}
+		</button>
+	);
 }
 
 export default function App() {
@@ -148,10 +171,7 @@ export default function App() {
 					)}
 				</main>
 				<footer className="flex items-center justify-between gap-2 border-t border-line px-4 py-2 text-xs text-muted">
-					<span className="flex items-center gap-1.5">
-						<span className="size-1.5 rounded-full bg-ok" aria-hidden="true" />
-						Saved on this device
-					</span>
+					<SyncStatus />
 					<span className="flex items-center gap-2">
 						<Kbd>{isMac ? '⌘' : 'Ctrl'} K</Kbd>
 						<span className="tabular-nums">v{version()}</span>
