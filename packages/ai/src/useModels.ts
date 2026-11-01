@@ -80,7 +80,8 @@ export function useModels(toolId: string): Models {
 		refreshing,
 		note,
 		model() {
-			if (!choice || !keys) throw new Error('Add an AI provider key in the dashboard first.');
+			if (!choice || !keys)
+				throw new Error('Connect a Claude subscription or provider API key in the dashboard first.');
 			return createModel(choice, keys);
 		}
 	};

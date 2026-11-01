@@ -40,7 +40,7 @@ describe('Profile lens panel', () => {
 	it('asks for an AI key first', async () => {
 		onTab('https://www.linkedin.com/in/jane/');
 		renderPanel();
-		expect(await screen.findByText('Add an AI provider key')).toBeTruthy();
+		expect(await screen.findByText('Connect an AI provider')).toBeTruthy();
 	});
 
 	it('waits for a LinkedIn profile, and says how to get one', async () => {

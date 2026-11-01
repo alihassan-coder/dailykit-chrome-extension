@@ -180,15 +180,15 @@ export default function ProfileLensPanel() {
 	if (!ai.choice) {
 		return (
 			<EmptyState
-				title="Add an AI provider key"
-				body="Profile lens uses your own key for Anthropic, OpenAI, Grok or Gemini, the same keys as the agent."
+				title="Connect an AI provider"
+				body="Profile lens uses the same Claude subscription or provider API keys as the agent."
 				action={
 					<Button
 						variant="primary"
 						icon={<KeyRound size={16} />}
 						onClick={() => void browser.tabs.create({ url: dashboardUrl('ai') })}
 					>
-						Add a key
+						Connect a provider
 					</Button>
 				}
 			/>

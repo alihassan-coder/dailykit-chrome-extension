@@ -22,7 +22,7 @@ afterEach(cleanup);
 describe('Browser agent panel', () => {
 	it('asks for an API key before anything else', async () => {
 		renderPanel();
-		expect(await screen.findByText('Add an AI provider key')).toBeTruthy();
+		expect(await screen.findByText('Connect an AI provider')).toBeTruthy();
 	});
 
 	it('offers the models of the providers you have keys for', async () => {

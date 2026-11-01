@@ -4,6 +4,18 @@ import { MAX_AGE_MS, available, fetchModels, isChatModel, keyTag, refresh, stale
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
 describe('fetchModels', () => {
+	it('lists Claude models using bearer authentication for setup tokens', async () => {
+		const token = `sk-ant-oat01-${'x'.repeat(90)}`;
+		const fetchFn = vi.fn().mockResolvedValue(reply({ data: [{ id: 'claude-haiku-5-5' }] }));
+		await fetchModels('anthropic', token, fetchFn);
+		const headers = fetchFn.mock.calls[0]![1].headers;
+		expect(headers.Authorization).toBe(`Bearer ${token}`);
+		expect(headers['x-api-key']).toBeUndefined();
+		expect(headers['anthropic-beta']).toContain('oauth-2025-04-20');
+		await expect(fetchModels('anthropic', token, vi.fn().mockResolvedValue(reply({}, 401)))).rejects.toThrow(
+			'claude setup-token'
+		);
+	});
 	it('reads every page of Anthropic models with display names', async () => {
 		const fetchFn = vi
 			.fn()
@@ -95,6 +107,15 @@ describe('caching', () => {
 		});
 		expect(cache.anthropic?.models[0]?.id).toBe('old');
 		expect(errors.anthropic).toMatch(/500/);
+	});
+
+	it('drops an old credential’s model list when a replacement cannot refresh', async () => {
+		const replacement = { anthropic: `sk-ant-oat01-${'x'.repeat(90)}` };
+		expect(available(fresh, replacement).length).toBeGreaterThan(0);
+		const { cache } = await refresh(fresh, replacement, {
+			fetchFn: vi.fn().mockResolvedValue(reply({}, 401))
+		});
+		expect(cache.anthropic).toBeUndefined();
 	});
 
 	it('offers live lists, or verified Claude ids before the first load, and nothing guessed', () => {

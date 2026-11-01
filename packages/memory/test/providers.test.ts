@@ -38,6 +38,21 @@ describe('choosing models', () => {
 });
 
 describe('provider adapters', () => {
+	it('uses the Claude subscription protocol for memory extraction', async () => {
+		const token = `sk-ant-oat01-${'x'.repeat(90)}`;
+		const { calls, fetchFn } = recorder({ content: [{ type: 'text', text: '{}' }] });
+		const llm = createLlm({ provider: 'anthropic', model: 'claude-haiku-5-5' }, token, fetchFn);
+		await llm.generateChat([
+			{ role: 'system', content: 'Extract facts' },
+			{ role: 'user', content: 'Hi' }
+		]);
+		expect(calls[0]!.headers.Authorization).toBe(`Bearer ${token}`);
+		expect(calls[0]!.headers['x-api-key']).toBeUndefined();
+		expect(calls[0]!.body.system).toEqual([
+			{ type: 'text', text: "You are Claude Code, Anthropic's official CLI for Claude." },
+			{ type: 'text', text: 'Extract facts' }
+		]);
+	});
 	it('embeds with Gemini in one batch, shortened and normalised', async () => {
 		const { calls, fetchFn } = recorder({ embeddings: [{ values: [3, 4] }, { values: [0, 2] }] });
 		const embedder = createEmbedder(chooseEmbedder({ gemini: 'AIza-key' })!, 'AIza-key', fetchFn);

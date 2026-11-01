@@ -278,6 +278,9 @@ importers:
       '@noble/hashes':
         specifier: 2.4.0
         version: 2.4.0
+      '@toolbelt/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@toolbelt/core':
         specifier: workspace:*
         version: link:../../packages/core

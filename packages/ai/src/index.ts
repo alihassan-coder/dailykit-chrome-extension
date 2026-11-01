@@ -4,3 +4,4 @@ export * from './providers.ts';
 export * from './models.ts';
 export * from './ModelPicker.tsx';
 export * from './useModels.ts';
+export * from './connection.ts';

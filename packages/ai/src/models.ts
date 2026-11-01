@@ -1,5 +1,5 @@
 // The models each provider offers for the user's key, fetched live (not hard-coded) and cached for a day.
-import type { ApiKeys, ProviderId } from '@toolbelt/core';
+import { anthropicAuthHeaders, type ApiKeys, type ProviderId } from '@toolbelt/core';
 
 export interface ModelInfo {
 	provider: ProviderId;
@@ -42,11 +42,17 @@ export class ModelsError extends Error {}
 async function getJson(url: string, headers: Record<string, string>, fetchFn: typeof fetch): Promise<unknown> {
 	let res: Response;
 	try {
-		res = await fetchFn(url, { headers });
+		res = await fetchFn(url, { headers, signal: AbortSignal.timeout(15_000) });
 	} catch {
 		throw new ModelsError('You seem to be offline.');
 	}
-	if (res.status === 401 || res.status === 403) throw new ModelsError('The provider rejected this API key.');
+	if (res.status === 401 || res.status === 403) {
+		throw new ModelsError(
+			headers.Authorization?.startsWith('Bearer sk-ant-oat01-')
+				? 'Claude rejected this setup token. Run claude setup-token again and replace it in AI providers.'
+				: 'The provider rejected this API key.'
+		);
+	}
 	if (res.status === 429) throw new ModelsError('Too many requests; try again in a minute.');
 	if (!res.ok) throw new ModelsError(`The provider answered ${res.status}.`);
 	return res.json();
@@ -65,11 +71,7 @@ export async function fetchModels(
 		for (;;) {
 			const body = (await getJson(
 				`https://api.anthropic.com/v1/models?limit=100${after ? `&after_id=${after}` : ''}`,
-				{
-					'x-api-key': key,
-					'anthropic-version': '2023-06-01',
-					'anthropic-dangerous-direct-browser-access': 'true'
-				},
+				anthropicAuthHeaders(key),
 				fetchFn
 			)) as { data?: Json[]; has_more?: boolean; last_id?: string };
 			for (const m of body.data ?? []) out.push({ provider, id: String(m.id), name: String(m.display_name ?? m.id) });
@@ -123,7 +125,7 @@ export async function refresh(
 	const now = opts.now ?? Date.now();
 	const due = opts.force ? (Object.keys(keys) as ProviderId[]).filter((p) => keys[p]) : stale(cache, keys, now);
 	const next: ModelCache = {};
-	for (const p of Object.keys(keys) as ProviderId[]) if (cache[p]) next[p] = cache[p];
+	for (const p of Object.keys(keys) as ProviderId[]) if (cache[p]?.key === keyTag(keys[p]!)) next[p] = cache[p];
 	const errors: Partial<Record<ProviderId, string>> = {};
 	await Promise.all(
 		due.map(async (p) => {
@@ -141,7 +143,7 @@ export async function refresh(
 export function available(cache: ModelCache, keys: ApiKeys): ModelInfo[] {
 	return (['anthropic', 'openai', 'xai', 'gemini'] as ProviderId[])
 		.filter((p) => keys[p])
-		.flatMap((p) => cache[p]?.models ?? FALLBACK[p] ?? []);
+		.flatMap((p) => (cache[p]?.key === keyTag(keys[p]!) ? cache[p]?.models : undefined) ?? FALLBACK[p] ?? []);
 }
 
 export function resolveCache(raw: unknown): ModelCache {

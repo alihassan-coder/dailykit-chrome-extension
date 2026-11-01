@@ -17,6 +17,12 @@ export const PROVIDERS = [
 export type ProviderId = (typeof PROVIDERS)[number]['id'];
 export type ApiKeys = Partial<Record<ProviderId, string>>;
 
+/** Setup tokens share the existing credential slot; old API-key settings need no migration. */
+export const isClaudeSetupToken = (value: string): boolean => value.trim().startsWith('sk-ant-oat01-');
+
+export const looksLikeClaudeSetupToken = (value: string): boolean =>
+	/^sk-ant-oat01-[A-Za-z0-9_-]+$/.test(value.trim()) && value.trim().length >= 80;
+
 const IDS = PROVIDERS.map((p) => p.id) as readonly string[];
 
 export function resolveApiKeys(raw: unknown): ApiKeys {

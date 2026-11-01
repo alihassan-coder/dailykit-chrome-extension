@@ -52,6 +52,28 @@ pnpm build
 
 After you change code, run `pnpm build` again and press the reload icon on the extension card.
 
+## Connect your Claude subscription
+
+1. With Claude Code installed, run `claude setup-token` in your terminal and sign in with your Claude account.
+2. Open the Toolbelt dashboard → **AI providers** → **Anthropic**. Choose **Claude subscription (setup token)**.
+3. Paste the complete token starting with `sk-ant-oat01-` and click **Save token**.
+4. Click **Test connection** to send a small Claude request using your account allowance, then choose a Claude model in the agent or Profile Lens.
+
+The setup token uses bearer authentication through the shared Claude adapter. Existing API keys still work;
+switch the Anthropic connection method to **API key** to use API billing. The extension stores one Anthropic
+credential at a time. Credentials stay in browser local storage unless you enable encrypted account sync.
+
+Subscription limits and model access depend on your Anthropic account. Setup tokens have no refresh token;
+if one expires or is revoked, run `claude setup-token` again and use **Replace token**. The connection test
+reports authentication and usage-limit failures without exposing the token. Model discovery can fail for a
+token with inference-only access; the model picker then offers the built-in Claude fallback list.
+
+Memory can use the Claude token for fact extraction, but still requires an OpenAI or Gemini API key for
+embeddings. The extension cannot launch or automatically read a local Claude Code login.
+
+Protocol references: [OpenClaw setup-token authentication](https://docs.openclaw.ai/gateway/authentication)
+and [pi's Claude adapter](https://github.com/earendil-works/pi/blob/main/packages/ai/src/api/anthropic-messages.ts).
+
 ## Develop
 
 Requires **Node 24** and **pnpm 12**, on a Linux filesystem such as ext4 (pnpm needs symlinks).

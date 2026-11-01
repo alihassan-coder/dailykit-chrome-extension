@@ -4,8 +4,14 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createXai } from '@ai-sdk/xai';
-import type { ApiKeys, ProviderId } from '@toolbelt/core';
-import type { LanguageModel } from 'ai';
+import {
+	CLAUDE_CODE_SYSTEM,
+	anthropicHeaders,
+	isClaudeSetupToken,
+	type ApiKeys,
+	type ProviderId
+} from '@toolbelt/core';
+import { wrapLanguageModel, type LanguageModel } from 'ai';
 import type { ModelInfo } from './models.ts';
 
 export interface ModelChoice {
@@ -23,11 +29,38 @@ export function createModel(choice: ModelChoice, keys: ApiKeys): LanguageModel {
 	const apiKey = keys[choice.provider];
 	if (!apiKey) throw new Error(`Add a ${choice.provider} API key in Toolbelt settings first.`);
 	switch (choice.provider) {
-		case 'anthropic':
-			// Calls go straight from the extension; Anthropic requires this header to accept browser requests.
-			return createAnthropic({ apiKey, headers: { 'anthropic-dangerous-direct-browser-access': 'true' } })(
-				choice.model
-			);
+		case 'anthropic': {
+			const subscription = isClaudeSetupToken(apiKey);
+			const headers = anthropicHeaders(apiKey);
+			const model = createAnthropic({
+				...(subscription ? { authToken: apiKey } : { apiKey }),
+				headers,
+				// AI SDK supplies its own per-call User-Agent, overriding provider headers. Apply the
+				// subscription protocol version at the final transport boundary; keep SDK beta headers.
+				...(subscription
+					? {
+							fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+								const finalHeaders = new Headers(init?.headers);
+								finalHeaders.set('user-agent', headers['user-agent']!);
+								return fetch(input, { ...init, headers: finalHeaders });
+							}
+						}
+					: {})
+			})(choice.model);
+			if (!subscription) return model;
+			// The subscription protocol requires this first system block. Preserve the tool's instructions
+			// and all messages/tool calls after it, for both streaming and non-streaming requests.
+			return wrapLanguageModel({
+				model,
+				middleware: {
+					specificationVersion: 'v4',
+					transformParams: async ({ params }) => ({
+						...params,
+						prompt: [{ role: 'system', content: CLAUDE_CODE_SYSTEM }, ...params.prompt]
+					})
+				}
+			});
+		}
 		case 'openai':
 			return createOpenAI({ apiKey })(choice.model);
 		case 'xai':

@@ -4,18 +4,18 @@ Updated 2026-11-01. One line per request; status: done, in progress, waiting (on
 
 ## Shell and design
 
-| Request                                                                                                           | Status      | Notes                                                                       |
-| ----------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------- |
-| One extension holding many tools, switch tools and features on and off, sort them                                 | done        | Dashboard → Tools                                                           |
-| Customisation (accent incl. custom colour, mode, density, corners, text size, font, contrast, motion, rail style) | done        | Dashboard → Appearance                                                      |
-| Global settings (general, AI providers, data and sync, about)                                                     | done        |                                                                             |
-| Logo for every tool                                                                                               | done        | tools/\*/src/icon.tsx                                                       |
-| Side panel redesign: premium, Chrome-native, compact, not like a website                                          | done        | Native tokens, system font, compact screens; research docs/research/design/ |
-| Search bar always on top of the side panel                                                                        | done        | Ctrl/Cmd+K focuses it                                                       |
-| Tool toolbar on the right edge, minimise / open toggle, styled hover tooltips with names                          | done        | `[` toggles; remembered; tooltips with Chrome timing                        |
-| Responsive from 320 px to 600 px+                                                                                 | done        | Container queries; toolbar overlays below 480 px                            |
-| Lots of information, never boring                                                                                 | in progress | Glance summaries and receipts per tool come with each tool                  |
-| New Toolbelt logo, meaningful and detailed                                                                        | done        | Holster; docs/design/logo-directions.html                                   |
+| Request                                                                                                           | Status      | Notes                                                                        |
+| ----------------------------------------------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------- |
+| One extension holding many tools, switch tools and features on and off, sort them                                 | done        | Dashboard → Tools                                                            |
+| Customisation (accent incl. custom colour, mode, density, corners, text size, font, contrast, motion, rail style) | done        | Dashboard → Appearance                                                       |
+| Global settings (general, AI providers, data and sync, about)                                                     | done        |                                                                              |
+| Logo for every tool                                                                                               | done        | tools/\*/src/icon.tsx                                                        |
+| Side panel redesign: premium, Chrome-native, compact, not like a website                                          | done        | Native tokens, system font, compact screens; research docs/research/design/  |
+| Search bar always on top of the side panel                                                                        | done        | Ctrl/Cmd+K focuses it                                                        |
+| Tool toolbar on the right edge, minimise / open toggle, styled hover tooltips with names                          | done        | `[` toggles; remembered; tooltips with Chrome timing                         |
+| Responsive from 320 px to 600 px+                                                                                 | done        | Container queries; toolbar overlays below 480 px                             |
+| Lots of information, never boring                                                                                 | in progress | Glance summaries and receipts per tool come with each tool                   |
+| New Toolbelt logo, meaningful and detailed                                                                        | done        | T mark on the shared tool tile (ToolTile); PNGs from scripts/render-icons.py |
 
 ## Accounts, data, sync
 
@@ -29,16 +29,20 @@ Updated 2026-11-01. One line per request; status: done, in progress, waiting (on
 
 ## Tools
 
-| Request                                                                                       | Status   | Notes                                                                                                                                                      |
-| --------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Colour picker                                                                                 | done     |                                                                                                                                                            |
-| Black-and-white mode for any site                                                             | done     |                                                                                                                                                            |
-| AI browser agent like Claude for Chrome: reads the page tree, screenshots, acts with approval | done     | tools/agent                                                                                                                                                |
-| Anthropic, OpenAI, xAI Grok and Gemini with the user's own keys                               | done     | Vercel AI SDK for all four                                                                                                                                 |
-| Models fetched at runtime from each provider (not hard-coded), searchable in the picker       | done     | tools/agent/src/models.ts, ModelPicker.tsx                                                                                                                 |
-| Long-term memory with the mem0 open-source SDK, stored in Neon                                | done     | packages/memory, Dashboard → Memory. End-to-end encrypted in toolbelt.records; needs an OpenAI or Gemini key for embeddings                                |
-| Chat history for claude.ai and chatgpt.com (Cairn port, new UI)                               | next     |                                                                                                                                                            |
-| Use Claude through a Claude Code `setup-token` (subscription)                                 | declined | Anthropic's terms prohibit subscription OAuth tokens in third-party tools and they enforce it; risks the user's account. Use an Anthropic API key instead. |
+| Request                                                                                                                     | Status   | Notes                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Colour picker                                                                                                               | done     |                                                                                                                                                            |
+| Black-and-white mode for any site                                                                                           | done     |                                                                                                                                                            |
+| AI browser agent like Claude for Chrome: reads the page tree, screenshots, acts with approval                               | done     | tools/agent                                                                                                                                                |
+| Anthropic, OpenAI, xAI Grok and Gemini with the user's own keys                                                             | done     | Vercel AI SDK for all four                                                                                                                                 |
+| Models fetched at runtime from each provider (not hard-coded), searchable in the picker                                     | done     | tools/agent/src/models.ts, ModelPicker.tsx                                                                                                                 |
+| Long-term memory with the mem0 open-source SDK, stored in Neon                                                              | done     | packages/memory, Dashboard → Memory. End-to-end encrypted in toolbelt.records; needs an OpenAI or Gemini key for embeddings                                |
+| LinkedIn profile analyser: read full profile, ICP + custom question sets, AI answers, follow-up chat, synced history        | done     | tools/profile-lens (Profile lens). User-triggered, one profile at a time                                                                                   |
+| Side panel and dashboard fixes: open-toolbar buttons, fixed dashboard menu, styled dropdowns, keyboard table, larger labels | done     |                                                                                                                                                            |
+| Shared AI package (keys, live model lists, model picker) for every tool                                                     | done     | packages/ai; the agent and Profile lens use it                                                                                                             |
+| Page favicons use the current logo                                                                                          | done     | options and side panel index.html                                                                                                                          |
+| Chat history for claude.ai and chatgpt.com (Cairn port, new UI)                                                             | next     |                                                                                                                                                            |
+| Use Claude through a Claude Code `setup-token` (subscription)                                                               | declined | Anthropic's terms prohibit subscription OAuth tokens in third-party tools and they enforce it; risks the user's account. Use an Anthropic API key instead. |
 
 ## Quality
 

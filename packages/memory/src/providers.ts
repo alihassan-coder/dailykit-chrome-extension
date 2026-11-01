@@ -1,6 +1,12 @@
 // Small fetch-based embedders and LLMs in the shape mem0 expects. mem0's built-in providers construct the
 // OpenAI/Anthropic SDKs, which refuse to run in Firefox's background page; plain fetch works everywhere.
-import type { ApiKeys, ProviderId } from '@toolbelt/core';
+import {
+	CLAUDE_CODE_SYSTEM,
+	anthropicAuthHeaders,
+	isClaudeSetupToken,
+	type ApiKeys,
+	type ProviderId
+} from '@toolbelt/core';
 import type { Embedder, LLM, LLMResponse, Message } from 'mem0ai/oss';
 
 /** Each answer must arrive well inside the 30 s a service worker may wait on one fetch. */
@@ -82,7 +88,12 @@ async function post(fetchFn: Fetch, url: string, headers: Record<string, string>
 		signal: AbortSignal.timeout(TIMEOUT_MS)
 	});
 	if (!res.ok) {
-		const detail = res.status === 401 || res.status === 403 ? 'the API key was rejected' : `status ${res.status}`;
+		const detail =
+			res.status === 401 || res.status === 403
+				? headers.Authorization?.startsWith('Bearer sk-ant-oat01-')
+					? 'the Claude setup token was rejected; run claude setup-token again and replace it in AI providers'
+					: 'the API key was rejected'
+				: `status ${res.status}`;
 		throw new Error(`The AI provider answered with ${detail}.`);
 	}
 	return res.json();
@@ -155,24 +166,21 @@ export function createLlm(choice: ExtractorChoice, apiKey: string, fetchFn: Fetc
 
 		if (choice.provider === 'anthropic') {
 			// No JSON mode; mem0 pulls the JSON out of the reply (fenced or not).
-			const body = (await post(
-				fetchFn,
-				'https://api.anthropic.com/v1/messages',
-				{
-					'x-api-key': apiKey,
-					'anthropic-version': '2023-06-01',
-					'anthropic-dangerous-direct-browser-access': 'true'
-				},
-				{
-					model: choice.model,
-					max_tokens: 2048,
-					...(system ? { system } : {}),
-					messages: turns.map((m) => ({
-						role: m.role === 'assistant' ? 'assistant' : 'user',
-						content: asText(m.content)
-					}))
-				}
-			)) as { content: { type: string; text?: string }[] };
+			const body = (await post(fetchFn, 'https://api.anthropic.com/v1/messages', anthropicAuthHeaders(apiKey), {
+				model: choice.model,
+				max_tokens: 2048,
+				...(isClaudeSetupToken(apiKey)
+					? {
+							system: [{ type: 'text', text: CLAUDE_CODE_SYSTEM }, ...(system ? [{ type: 'text', text: system }] : [])]
+						}
+					: system
+						? { system }
+						: {}),
+				messages: turns.map((m) => ({
+					role: m.role === 'assistant' ? 'assistant' : 'user',
+					content: asText(m.content)
+				}))
+			})) as { content: { type: string; text?: string }[] };
 			return body.content
 				.filter((c) => c.type === 'text')
 				.map((c) => c.text ?? '')

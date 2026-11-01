@@ -99,15 +99,15 @@ export default function AgentPanel() {
 	if (!choice) {
 		return (
 			<EmptyState
-				title="Add an AI provider key"
-				body="The agent uses your own key for Anthropic, OpenAI, Grok or Gemini. Keys stay in this browser and sync encrypted."
+				title="Connect an AI provider"
+				body="Connect your Claude subscription or an API key for Anthropic, OpenAI, Grok or Gemini in AI providers."
 				action={
 					<Button
 						variant="primary"
 						icon={<KeyRound size={16} />}
 						onClick={() => void browser.tabs.create({ url: dashboardUrl('ai') })}
 					>
-						Add a key
+						Connect a provider
 					</Button>
 				}
 			/>
