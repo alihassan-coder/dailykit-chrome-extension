@@ -33,6 +33,7 @@
   --accent: #7e98ff; --ok: #6cc28f; --warn: #e0a24a; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.55;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -185,7 +186,7 @@ ul.plain li::marker { color: var(--accent); }
   <header>
     <div class="mark"><div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div><strong>Toolbelt</strong></div>
     <h1>One extension for every tool you build</h1>
-    <p class="lede">The plan and a first look at the design, for review before any code is written. Cairn becomes the first module: its engine is kept, and every screen is redesigned. Change the theme below to see how one set of tokens restyles every module.</p>
+    <p class="lede">The design direction for Toolbelt. One small set of theme tokens styles every tool, so changing the accent, mode, density or corners below restyles everything at once. Cairn is the first tool.</p>
   </header>
 
   <section aria-labelledby="look">
@@ -304,7 +305,7 @@ ul.plain li::marker { color: var(--accent); }
                   <li class="mod" draggable="true">
                     <div class="mod-row">
                       <span class="grip" aria-hidden="true">⋮⋮</span><span class="ico">+</span>
-                      <div style="min-width:0"><div class="name">Your next tool</div><div class="desc">One folder in modules/, listed here automatically</div></div>
+                      <div style="min-width:0"><div class="name">Your next tool</div><div class="desc">One folder in tools/, listed here automatically</div></div>
                       <span class="chip">template</span>
                       <button class="sw" role="switch" aria-checked="false" aria-label="Template on"></button>
                     </div>

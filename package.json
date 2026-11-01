@@ -1,6 +1,8 @@
 {
 	"name": "toolbelt",
 	"private": true,
+	"description": "Your own browser tools in one extension. Each tool also ships on its own.",
+	"license": "MIT",
 	"type": "module",
 	"packageManager": "pnpm@12.14.0",
 	"engines": {

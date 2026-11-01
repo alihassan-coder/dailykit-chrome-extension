@@ -35,14 +35,14 @@ export interface ToolDescriptor {
 	features: FeatureSpec[];
 }
 
-const ID = /^[a-z][a-z0-9-]*$/;
+const KEBAB_ID = /^[a-z][a-z0-9-]*$/;
 
 /** Identity function with validation, so a broken descriptor fails the build, not the browser. */
 export function defineTool(tool: ToolDescriptor): ToolDescriptor {
-	if (!ID.test(tool.id)) throw new Error(`Tool id "${tool.id}" must be lowercase kebab-case`);
+	if (!KEBAB_ID.test(tool.id)) throw new Error(`Tool id "${tool.id}" must be lowercase kebab-case`);
 	const seen = new Set<string>();
 	for (const s of tool.contentScripts) {
-		if (!ID.test(s.id)) throw new Error(`${tool.id}: content script id "${s.id}" must be lowercase kebab-case`);
+		if (!KEBAB_ID.test(s.id)) throw new Error(`${tool.id}: content script id "${s.id}" must be lowercase kebab-case`);
 		if (seen.has(s.id)) throw new Error(`${tool.id}: duplicate content script id "${s.id}"`);
 		seen.add(s.id);
 		for (const m of s.matches) {
@@ -58,5 +58,5 @@ export function defineTool(tool: ToolDescriptor): ToolDescriptor {
 }
 
 /** Runtime id for a registered content script. The prefix lets the shell touch only its own registrations. */
-export const scriptId = (toolId: string, scriptIdPart: string) => `tb:${toolId}:${scriptIdPart}`;
+export const scriptId = (toolId: string, localId: string) => `tb:${toolId}:${localId}`;
 export const SCRIPT_PREFIX = 'tb:';

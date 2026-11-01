@@ -4,7 +4,7 @@
 const TW = /--tw-/g;
 export const PREFIX = '--tb-tw-';
 
-export const renameTwProperties = (css: string) => css.replace(TW, PREFIX);
+export const prefixTailwindVars = (css: string) => css.replace(TW, PREFIX);
 
 interface OutputFile {
 	type: string;
@@ -12,19 +12,19 @@ interface OutputFile {
 	code?: string;
 }
 
-export function renameTailwindProperties() {
+export function tailwindPrefixPlugin() {
 	return {
-		name: 'toolbelt-rename-tw-properties',
+		name: 'toolbelt-prefix-tailwind-vars',
 		enforce: 'post' as const,
 		transform(code: string, id: string) {
 			if (!/\.css($|\?)/.test(id) || !code.includes('--tw-')) return undefined;
-			return { code: renameTwProperties(code), map: null };
+			return { code: prefixTailwindVars(code), map: null };
 		},
 		// CSS inlined into content-script chunks (cssInjectionMode: 'ui') and emitted .css assets.
 		generateBundle(_: unknown, bundle: Record<string, OutputFile>) {
 			for (const file of Object.values(bundle)) {
-				if (file.type === 'asset' && typeof file.source === 'string') file.source = renameTwProperties(file.source);
-				if (file.type === 'chunk' && file.code?.includes('--tw-')) file.code = renameTwProperties(file.code);
+				if (file.type === 'asset' && typeof file.source === 'string') file.source = prefixTailwindVars(file.source);
+				if (file.type === 'chunk' && file.code?.includes('--tw-')) file.code = prefixTailwindVars(file.code);
 			}
 		}
 	};

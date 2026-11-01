@@ -1,4 +1,4 @@
-// Spike: page-world script. Proves a tool package can ship a MAIN-world, document_start script.
+// Placeholder until Cairn's page bridge is ported: marks the page so tests can see the page-world script ran.
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { CLAUDE } from '../sites.ts';
 

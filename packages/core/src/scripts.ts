@@ -24,13 +24,13 @@ export interface RuntimeTool {
 	contentScripts: { id: string; matches: string[]; world: World; runAt: RunAt; js: string[] }[];
 }
 
-const same = (a: RegisteredScript, b: RegisteredScript) =>
+const sameScript = (a: RegisteredScript, b: RegisteredScript) =>
 	a.world === b.world &&
 	a.runAt === b.runAt &&
 	JSON.stringify(a.matches) === JSON.stringify(b.matches) &&
 	JSON.stringify(a.js) === JSON.stringify(b.js);
 
-export async function reconcileScripts(opts: {
+export async function syncToolScripts(opts: {
 	tools: RuntimeTool[];
 	enabled: string[];
 	hasAccess: (origins: string[]) => Promise<boolean>;
@@ -55,7 +55,7 @@ export async function reconcileScripts(opts: {
 	const current = (await opts.scripting.getRegisteredContentScripts()).filter((s) => s.id.startsWith(SCRIPT_PREFIX));
 	const remove = current.filter((c) => {
 		const want = desired.find((d) => d.id === c.id);
-		return !want || !same(c, want);
+		return !want || !sameScript(c, want);
 	});
 	const kept = new Set(current.filter((c) => !remove.includes(c)).map((c) => c.id));
 	const add = desired.filter((d) => !kept.has(d.id));

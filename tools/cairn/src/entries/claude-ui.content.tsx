@@ -1,6 +1,6 @@
-// Spike: React + Tailwind inside a shadow root on claude.ai. Checks that styles apply (incl. shadow/ring, which
-// depend on @property), that the page's own styles stay untouched, and that a Radix popover portals into our
-// shadow root and closes on an outside click.
+// Placeholder until Cairn's real UI is ported: a "Save chat" chip with a popover, mounted in a shadow root.
+// The e2e test uses it to prove our styles work on claude.ai without touching the page's own styles, and that
+// floating layers render inside our shadow root.
 import '@toolbelt/ui/styles.css';
 import { PortalContainerProvider, usePortalContainer } from '@toolbelt/ui';
 import { Popover } from 'radix-ui';

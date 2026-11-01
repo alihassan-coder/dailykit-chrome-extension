@@ -1,22 +1,27 @@
 /// <reference types="@toolbelt/wxt-kit/registry" />
-import { reconcileScripts } from '@toolbelt/core';
+import { syncToolScripts } from '@toolbelt/core';
 import registry from 'virtual:toolbelt/registry';
 
-// Spike: every tool counts as switched on until the dashboard and settings store exist (Phase 2).
-const enabled = () => registry.tools.map((t) => t.id);
+// Until the dashboard and its settings store exist, every tool counts as switched on.
+const enabledTools = () => registry.tools.map((t) => t.id);
 
-async function reconcile() {
-	await reconcileScripts({
+function syncScripts() {
+	return syncToolScripts({
 		tools: registry.tools,
-		enabled: enabled(),
+		enabled: enabledTools(),
 		hasAccess: (origins) => browser.permissions.contains({ origins }),
 		scripting: browser.scripting
 	});
 }
 
 export default defineBackground(() => {
-	browser.runtime.onInstalled.addListener(() => void reconcile());
-	browser.runtime.onStartup.addListener(() => void reconcile());
-	browser.permissions.onAdded.addListener(() => void reconcile());
-	browser.permissions.onRemoved.addListener(() => void reconcile());
+	// Anything that can change which tools may run: install/update, browser start, site access granted or revoked.
+	for (const event of [
+		browser.runtime.onInstalled,
+		browser.runtime.onStartup,
+		browser.permissions.onAdded,
+		browser.permissions.onRemoved
+	]) {
+		event.addListener(() => void syncScripts());
+	}
 });

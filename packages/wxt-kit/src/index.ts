@@ -4,11 +4,11 @@
 import 'wxt';
 import { addViteConfig, defineWxtModule } from 'wxt/modules';
 import type { ToolDescriptor } from '@toolbelt/core';
-import { renameTailwindProperties } from './css.ts';
+import { tailwindPrefixPlugin } from './css.ts';
 import { applyTools, entryName, runtimeRegistry, type BuildMode } from './manifest.ts';
 
 export { applyTools, entryName, runtimeRegistry, scriptFile, type BuildMode } from './manifest.ts';
-export { renameTwProperties } from './css.ts';
+export { prefixTailwindVars } from './css.ts';
 
 export interface ToolbeltOptions {
 	mode: BuildMode;
@@ -41,7 +41,7 @@ export default defineWxtModule<ToolbeltOptions>({
 
 		addViteConfig(wxt, () => ({
 			plugins: [
-				renameTailwindProperties(),
+				tailwindPrefixPlugin(),
 				{
 					name: 'toolbelt-registry',
 					resolveId: (id: string) => (id === VIRTUAL_ID ? RESOLVED_ID : undefined),

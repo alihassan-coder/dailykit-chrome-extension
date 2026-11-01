@@ -1,7 +1,7 @@
 import { defineTool } from '@toolbelt/core';
 import { describe, expect, it } from 'vitest';
 import { applyTools, runtimeRegistry, scriptFile } from '../src/manifest.ts';
-import { renameTwProperties } from '../src/css.ts';
+import { prefixTailwindVars } from '../src/css.ts';
 
 const cairn = defineTool({
 	id: 'cairn',
@@ -84,10 +84,10 @@ describe('runtimeRegistry', () => {
 	});
 });
 
-describe('renameTwProperties', () => {
+describe('prefixTailwindVars', () => {
 	it('renames @property rules, declarations and var() uses', () => {
 		const css = '@property --tw-ring-color{syntax:"*"}.a{--tw-ring-color:red;box-shadow:var(--tw-ring-color)}';
-		const out = renameTwProperties(css);
+		const out = prefixTailwindVars(css);
 		expect(out).not.toContain('--tw-');
 		expect(out).toContain('@property --tb-tw-ring-color');
 		expect(out).toContain('var(--tb-tw-ring-color)');
