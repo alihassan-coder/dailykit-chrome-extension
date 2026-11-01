@@ -1,6 +1,6 @@
 // The small set of controls every Toolbelt screen is built from. Styled only with theme tokens.
 import { type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { ToolTile } from './ToolTile.tsx';
+import { BrandIcon } from './BrandIcon.tsx';
 
 const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(' ');
 
@@ -166,15 +166,9 @@ export function Kbd({ children }: { children: ReactNode }) {
 	);
 }
 
-// The Toolbelt mark: a belt strap and the tool hanging from it make a T, on the same tile as every tool's logo.
-// The toolbar PNGs come from scripts/render-icons.py, so keep the two in step.
+// The generated Toolbelt artwork is shared with the extension toolbar PNGs.
 export function Logo({ size = 20 }: { size?: number }) {
-	return (
-		<ToolTile size={size} from="#6d8bff" to="#2a45d6">
-			<rect x="3.6" y="5" width="12.8" height="3.8" rx="1.9" />
-			<rect x="8.1" y="5" width="3.8" height="10.6" rx="1.9" />
-		</ToolTile>
-	);
+	return <BrandIcon mark="toolbelt" size={size} />;
 }
 
 /** Empty states give direction: what this is, and the one thing to do next. */

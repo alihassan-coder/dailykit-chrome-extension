@@ -13,7 +13,10 @@ export default defineConfig({
 		name: 'Cairn',
 		description: 'Keep your private Claude and ChatGPT chats, and see context and usage as you type.',
 		minimum_chrome_version: '116',
-		action: { default_title: 'Cairn' },
+		action: {
+			default_title: 'Cairn',
+			default_icon: { 16: 'icon/16.png', 24: 'icon/24.png', 32: 'icon/32.png', 48: 'icon/48.png', 128: 'icon/128.png' }
+		},
 		browser_specific_settings: {
 			gecko: { id: '{7360d646-3345-4e59-8009-a29b7d851cef}', strict_min_version: '142.0' }
 		}

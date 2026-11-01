@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 20 20"><title>Agent</title><defs><linearGradient id="agent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#574577"/><stop offset="1" stop-color="#302540"/>
+    </linearGradient></defs>
+    <rect width="20" height="20" rx="5" fill="url(#agent)"/>
+    <rect x=".4" y=".4" width="19.2" height="19.2" rx="4.6" fill="none" stroke="white" stroke-opacity=".12" stroke-width=".6"/>
+    <g stroke-linecap="round" stroke-linejoin="round"><path fill="#F7F7F2" d="M5.1 4.2 14.3 10l-4.2 1.1-2.2 4.1Z" stroke="none" stroke-width="0"/><path fill="none" d="m10.1 11.1 2.6 4.6" stroke="#F7F7F2" stroke-width="1.7"/><path fill="none" d="M14.4 3.6v3.8M12.5 5.5h3.8" stroke="#DAC5FF" stroke-width="1.4"/></g></svg>

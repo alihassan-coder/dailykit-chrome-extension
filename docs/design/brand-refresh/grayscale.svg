@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 20 20"><title>Black &amp; white</title><defs><linearGradient id="grayscale" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#535960"/><stop offset="1" stop-color="#282D34"/>
+    </linearGradient></defs>
+    <rect width="20" height="20" rx="5" fill="url(#grayscale)"/>
+    <rect x=".4" y=".4" width="19.2" height="19.2" rx="4.6" fill="none" stroke="white" stroke-opacity=".12" stroke-width=".6"/>
+    <g stroke-linecap="round" stroke-linejoin="round"><path fill="#F7F7F2" d="M10 4.5a5.5 5.5 0 1 0 0 11Z" stroke="none" stroke-width="0"/><path fill="none" d="M10 4.5a5.5 5.5 0 1 1 0 11" stroke="#B7BEC5" stroke-width="1.5"/><path fill="none" d="M10 4.5v11" stroke="#F7F7F2" stroke-width="1.25"/></g></svg>

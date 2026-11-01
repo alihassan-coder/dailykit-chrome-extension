@@ -43,7 +43,10 @@ export default defineConfig({
 		// policy blocks compiling it; 'wasm-unsafe-eval' allows only that, not eval() or remote code.
 		content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';" },
 		minimum_chrome_version: '116',
-		action: { default_title: 'Toolbelt' },
+		action: {
+			default_title: 'Toolbelt',
+			default_icon: { 16: 'icon/16.png', 24: 'icon/24.png', 32: 'icon/32.png', 48: 'icon/48.png', 128: 'icon/128.png' }
+		},
 		browser_specific_settings: {
 			gecko: { id: '{edc60449-e9d6-4c09-b757-6666e79d0bd7}', strict_min_version: '142.0' }
 		}

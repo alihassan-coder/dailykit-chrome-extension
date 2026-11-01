@@ -9,3 +9,4 @@ export * from './account.ts';
 export * from './Tooltip.tsx';
 export * from './ToolTile.tsx';
 export * from './Select.tsx';
+export * from './BrandIcon.tsx';
