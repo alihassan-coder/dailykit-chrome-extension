@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Toolbelt logo directions</title>
+<style>
+:root { --plate: #4467f5; --amber: #ffc53d; --w: #ffffff; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 28px; background: #eceef1; font: 13px/1.45 system-ui, 'Segoe UI', Roboto, Ubuntu, sans-serif; color: #1f2328; }
+h1 { margin: 0 0 4px; font-size: 18px; }
+.lead { margin: 0 0 20px; color: #5f6368; max-width: 900px; }
+.dirs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.card { background: #fff; border-radius: 14px; padding: 18px; display: grid; gap: 14px; }
+.card h2 { margin: 0; font-size: 15px; }
+.tag { font-size: 11px; font-weight: 600; color: #0b57d0; background: #d3e3fd; border-radius: 10px; padding: 2px 8px; margin-left: 6px; }
+.story { color: #5f6368; font-size: 12.5px; min-height: 38px; }
+.hero { display: grid; place-items: center; background: #f6f7f9; border-radius: 12px; padding: 14px 0; }
+.sizes { display: flex; align-items: flex-end; gap: 16px; }
+.sizes figure { margin: 0; display: grid; justify-items: center; gap: 4px; color: #5f6368; font-size: 11px; }
+.zoom { image-rendering: pixelated; }
+.bar { display: flex; align-items: center; gap: 12px; height: 34px; padding: 0 12px; border-radius: 17px; }
+.bar.light { background: #dfe3e7; }
+.bar.dark { background: #282828; }
+.bar .other { width: 16px; height: 16px; border-radius: 4px; }
+.bar .name { margin-left: auto; font-size: 11px; color: #5f6368; }
+.bar.dark .name { color: #9aa0a6; }
+.notes { margin: 0; padding-left: 18px; color: #3c4043; font-size: 12.5px; display: grid; gap: 3px; }
+</style>
+</head>
+<body>
+<h1>Toolbelt logo: three researched directions</h1>
+<p class="lead">Built from the research specs (docs/research/design/01-extension-logo.md). Large: the 128 px master. 16 px: a separate hand-fitted master, shown at real size and enlarged 6×. Bottom: as it would sit in Chrome's toolbar beside other extension icons, light and dark. Plate #4467F5, one amber accent #FFC53D.</p>
+<div class="dirs" id="dirs"></div>
+
+<script>
+const PLATE = '<rect x="16" y="16" width="96" height="96" rx="24" fill="var(--plate)"/>';
+const CLIP = '<clipPath id="pc-ID"><rect x="16" y="16" width="96" height="96" rx="24"/></clipPath>';
+const capsule = (x, y, w, h, fill) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${w / 2}" fill="${fill}"/>`;
+
+const DIRS = [
+	{
+		id: 'holster', name: 'Holster', tag: 'Recommended',
+		story: 'Three tools tucked into a belt strap, leaning; the amber one is the tool in your hand. Says both “belt” and “many tools”.',
+		svg: (id) => `${CLIP.replace('ID', id)}${PLATE}<g clip-path="url(#pc-${id})">
+			<g transform="translate(24 0) skewX(-18)">
+				${capsule(30, 40, 14, 60, 'var(--w)')}${capsule(54, 26, 14, 74, 'var(--amber)')}${capsule(78, 46, 14, 54, 'var(--w)')}
+			</g>
+			<rect x="16" y="66" width="96" height="26" fill="var(--plate)"/>
+			<rect x="16" y="70" width="96" height="18" fill="var(--w)"/></g>`,
+		px: ['................','................','..........AA....','.........AAA....','.........AA.....','....WW..AAA.....','....WW..AA......','...WW..AAA......','...WW..AA.......','................','WWWWWWWWWWWWWWWW','WWWWWWWWWWWWWWWW','................','..WW..AA........','................','................'],
+		notes: ['Strap runs edge to edge: a silhouette no other extension has', 'Tools must lean (upright reads as a bar chart)', '16 px shows two tools, not three']
+	},
+	{
+		id: 'prong', name: 'Prong', tag: 'Most “hardware”',
+		story: 'A buckle with the strap running through it; the amber prong fastens it. “One belt fastens everything.”',
+		svg: (id) => `${CLIP.replace('ID', id)}${PLATE}<g clip-path="url(#pc-${id})">
+			<rect x="16" y="54" width="96" height="20" fill="var(--w)"/>
+			<rect x="36" y="30" width="56" height="68" rx="16" fill="var(--plate)"/>
+			<rect x="40" y="34" width="48" height="60" rx="14" fill="var(--w)"/>
+			<rect x="52" y="46" width="24" height="36" rx="3" fill="var(--plate)"/>
+			<rect x="52" y="54" width="24" height="20" fill="var(--w)"/>
+			${capsule(46, 59, 50, 10, 'var(--amber)').replace('rx="25"', 'rx="5"')}
+			<circle cx="103" cy="64" r="4" fill="var(--plate)"/></g>`,
+		px: ['................','................','.....WWWWWW.....','....WWWWWWWW....','....WW....WW....','....WW....WW....','WWW.WWWWWWWW.WWW','WWW.AAAAAAAAA.WW','WWW.AAAAAAAAA.WW','WWW.WWWWWWWW.WWW','....WW....WW....','....WW....WW....','....WWWWWWWW....','.....WWWWWW.....','................','................'],
+		notes: ['Most literal belt; reads as hardware', 'Strap stubs must reach the edges or it reads as “8”', 'Weakest of the three at 16 px']
+	},
+	{
+		id: 'loop', name: 'Loop', tag: 'Clearest at 16 px',
+		story: 'One belt loop holding one amber tool. “Clip on the tool you need.” The same shape can give every sellable tool its own icon.',
+		svg: (id) => `${CLIP.replace('ID', id)}${PLATE}<g clip-path="url(#pc-${id})">
+			<rect x="16" y="68" width="96" height="22" fill="var(--w)"/>
+			<rect x="46" y="56" width="36" height="46" rx="10" fill="var(--plate)"/>
+			<rect x="50" y="60" width="28" height="38" rx="8" fill="var(--w)"/>
+			<rect x="58" y="68" width="12" height="22" fill="var(--plate)"/>
+			<g transform="rotate(18 64 64)">${capsule(57, 26, 14, 76, 'var(--amber)')}</g></g>`,
+		px: ['................','................','..........AA....','.........AAA....','.........AA.....','........AAA.....','........AA......','.......AAA......','................','WWWWWWWWWWWWWWWW','WWWWWWWWWWWWWWWW','................','.....AAA........','.....AA.........','................','................'],
+		notes: ['Strongest at 16 px', 'A family: each standalone tool gets the same loop with its own tool', 'Without the strap it would read as a pencil']
+	}
+];
+
+// 16 px master from its pixel map: plate with rounded corners, then each pixel.
+function pixelSvg(map) {
+	let cells = '';
+	map.forEach((row, y) => [...row].forEach((c, x) => {
+		if (c !== '.') cells += `<rect x="${x}" y="${y}" width="1" height="1" fill="var(--${c === 'A' ? 'amber' : 'w'})"/>`;
+	}));
+	return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><clipPath id="p16"><rect width="16" height="16" rx="4"/></clipPath><g clip-path="url(#p16)"><rect width="16" height="16" fill="var(--plate)"/>${cells}</g></svg>`;
+}
+const big = (d, size, n) => `<svg width="${size}" height="${size}" viewBox="16 16 96 96">${d.svg(`${d.id}-${n}`)}</svg>`;
+const sixteen = (d, scale = 1, cls = '') => pixelSvg(d.px).replace('<svg ', `<svg width="${16 * scale}" height="${16 * scale}" class="${cls}" `);
+const others = ['#e8453c', '#1a73e8', '#15c39a', '#9334e6'];
+const bar = (d, theme) => `<div class="bar ${theme}">${others.slice(0, 2).map((c) => `<span class="other" style="background:${c}"></span>`).join('')}${sixteen(d)}${others.slice(2).map((c) => `<span class="other" style="background:${c}"></span>`).join('')}<span class="name">${theme} toolbar</span></div>`;
+
+document.getElementById('dirs').innerHTML = DIRS.map((d) => `
+	<div class="card">
+		<h2>${d.name}<span class="tag">${d.tag}</span></h2>
+		<div class="story">${d.story}</div>
+		<div class="hero">${big(d, 168, 'hero')}</div>
+		<div class="sizes">
+			<figure>${big(d, 48, 48)}<figcaption>48</figcaption></figure>
+			<figure>${big(d, 32, 32)}<figcaption>32</figcaption></figure>
+			<figure>${sixteen(d)}<figcaption>16</figcaption></figure>
+			<figure>${sixteen(d, 6, 'zoom')}<figcaption>16 px master, 6×</figcaption></figure>
+		</div>
+		${bar(d, 'light')}${bar(d, 'dark')}
+		<ul class="notes">${d.notes.map((n) => `<li>${n}</li>`).join('')}</ul>
+	</div>`).join('');
+</script>
+</body>
+</html>

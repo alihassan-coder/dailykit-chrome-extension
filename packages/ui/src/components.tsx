@@ -1,5 +1,5 @@
 // The small set of controls every Toolbelt screen is built from. Styled only with theme tokens.
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useId, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(' ');
 
@@ -80,10 +80,10 @@ export function Button({ variant = 'plain', icon, className, children, ...rest }
 			type="button"
 			{...rest}
 			className={cx(
-				'inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors duration-100 disabled:opacity-40',
+				'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-3.5 text-base font-medium transition-colors duration-100 disabled:opacity-40',
 				variant === 'primary' && 'bg-accent text-on-accent hover:opacity-90',
-				variant === 'plain' && 'border border-line bg-surface text-ink hover:bg-soft',
-				variant === 'quiet' && 'text-muted hover:bg-soft hover:text-ink',
+				variant === 'plain' && 'bg-accent-soft text-accent hover:brightness-95',
+				variant === 'quiet' && 'text-accent hover:bg-accent-soft',
 				className
 			)}
 		>
@@ -155,14 +155,59 @@ export function Kbd({ children }: { children: ReactNode }) {
 	);
 }
 
-/** The Toolbelt logo: four squares, one in the accent colour. */
+// The Holster mark: three tools tucked into a belt strap, the amber one is the tool in use.
+// Spec: docs/research/design/01-extension-logo.md. Below 24 px it switches to the hand-fitted 16 px master.
+const HOLSTER_16 = [
+	'..........AA....',
+	'.........AAA....',
+	'.........AA.....',
+	'....WW..AAA.....',
+	'....WW..AA......',
+	'...WW..AAA......',
+	'...WW..AA.......',
+	'................',
+	'WWWWWWWWWWWWWWWW',
+	'WWWWWWWWWWWWWWWW',
+	'................',
+	'..WW..AA........'
+];
+
 export function Logo({ size = 20 }: { size?: number }) {
+	const id = useId();
+	if (size < 24) {
+		return (
+			<svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges" aria-hidden="true">
+				<clipPath id={id}>
+					<rect width="16" height="16" rx="4" />
+				</clipPath>
+				<g clipPath={`url(#${id})`}>
+					<rect width="16" height="16" fill="#4467f5" />
+					{HOLSTER_16.flatMap((row, y) =>
+						[...row].map((c, x) =>
+							c === '.' ? null : (
+								<rect key={`${x}-${y}`} x={x} y={y + 2} width="1" height="1" fill={c === 'A' ? '#ffc53d' : '#fff'} />
+							)
+						)
+					)}
+				</g>
+			</svg>
+		);
+	}
 	return (
-		<svg width={size} height={size} viewBox="0 0 20 20" aria-hidden="true">
-			<rect x="0" y="0" width="9" height="9" rx="2" fill="var(--tb-ink)" />
-			<rect x="11" y="0" width="9" height="9" rx="2" fill="var(--tb-accent)" />
-			<rect x="0" y="11" width="9" height="9" rx="2" fill="var(--tb-ink)" opacity="0.45" />
-			<rect x="11" y="11" width="9" height="9" rx="2" fill="var(--tb-ink)" opacity="0.2" />
+		<svg width={size} height={size} viewBox="16 16 96 96" aria-hidden="true">
+			<clipPath id={id}>
+				<rect x="16" y="16" width="96" height="96" rx="24" />
+			</clipPath>
+			<g clipPath={`url(#${id})`}>
+				<rect x="16" y="16" width="96" height="96" fill="#4467f5" />
+				<g transform="translate(24 0) skewX(-18)">
+					<rect x="30" y="40" width="14" height="60" rx="7" fill="#fff" />
+					<rect x="54" y="26" width="14" height="74" rx="7" fill="#ffc53d" />
+					<rect x="78" y="46" width="14" height="54" rx="7" fill="#fff" />
+				</g>
+				<rect x="16" y="66" width="96" height="26" fill="#4467f5" />
+				<rect x="16" y="70" width="96" height="18" fill="#fff" />
+			</g>
 		</svg>
 	);
 }

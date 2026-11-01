@@ -47,8 +47,8 @@ export default function GrayscalePanel() {
 	const skipped = host ? !appliesTo({ ...state, on: true, strength: 100 }, host) : false;
 
 	return (
-		<div className="grid gap-4">
-			<div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-4">
+		<div className="grid gap-2">
+			<div className="flex items-center justify-between gap-3 rounded-xl bg-surface p-3 border border-line">
 				<div>
 					<p className="font-semibold">Black and white</p>
 					<p className="text-sm text-muted">{state.on ? 'On for every site you visit' : 'Off'}</p>
@@ -56,7 +56,7 @@ export default function GrayscalePanel() {
 				<Switch label="Black and white" checked={state.on} onChange={(on) => change((s) => ({ ...s, on }))} />
 			</div>
 
-			<label className="grid gap-2 rounded-lg border border-line bg-surface p-4">
+			<label className="grid gap-2 rounded-xl bg-surface p-3 border border-line">
 				<span className="flex justify-between text-sm">
 					<span className="font-medium">Strength</span>
 					<span className="text-muted tabular-nums">{state.strength}%</span>
@@ -76,7 +76,7 @@ export default function GrayscalePanel() {
 				/>
 			</label>
 
-			<div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-4">
+			<div className="flex items-center justify-between gap-3 rounded-xl bg-surface p-3 border border-line">
 				<div className="min-w-0">
 					<p className="font-medium">Keep this site in colour</p>
 					<p className="truncate text-sm text-muted">{host ?? 'Not available on browser pages'}</p>

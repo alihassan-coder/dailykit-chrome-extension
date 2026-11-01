@@ -17,7 +17,8 @@ export const openDashboard = (section?: string) =>
 	void browser.tabs.create({ url: browser.runtime.getURL(`/options.html${section ? `#${section}` : ''}`) });
 
 export function buildCommands(settings: Settings, store: SettingsStore, openTool: (id: string) => void): Command[] {
-	const toolCommands: Command[] = enabledToolIds(settings).flatMap((id, i) => {
+	const railOpen = settings.theme.rail === 'labels';
+	const toolCommands: Command[] = enabledToolIds(settings).flatMap((id) => {
 		const tool = tools.find((t) => t.id === id);
 		if (!tool) return [];
 		return [
@@ -25,7 +26,7 @@ export function buildCommands(settings: Settings, store: SettingsStore, openTool
 				id: `tool:${id}`,
 				title: tool.name,
 				keywords: keywords[id],
-				hint: i < 9 ? `Alt ${i + 1}` : 'Tool',
+				hint: 'Tool',
 				run: () => openTool(id)
 			}
 		];
@@ -50,5 +51,15 @@ export function buildCommands(settings: Settings, store: SettingsStore, openTool
 			run: () => void store.update((s) => setTheme(s, { mode: m }))
 		}));
 
-	return [...toolCommands, ...sectionCommands, ...themeCommands];
+	const layoutCommands: Command[] = [
+		{
+			id: 'layout:rail',
+			title: railOpen ? 'Collapse the toolbar' : 'Open the toolbar',
+			keywords: ['sidebar', 'minimise', 'expand', 'names'],
+			hint: '[',
+			run: () => void store.update((s) => setTheme(s, { rail: railOpen ? 'icons' : 'labels' }))
+		}
+	];
+
+	return [...toolCommands, ...sectionCommands, ...themeCommands, ...layoutCommands];
 }

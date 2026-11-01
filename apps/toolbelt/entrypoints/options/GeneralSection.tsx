@@ -18,9 +18,10 @@ function Row({ label, hint, children }: { label: string; hint: string; children:
 }
 
 const SHORTCUTS = [
-	{ keys: ['Ctrl', 'K'], does: 'Search tools and settings (in the side panel)' },
-	{ keys: ['Alt', '1…9'], does: 'Switch to a tool in the side panel' },
-	{ keys: ['Alt', '↑ / ↓'], does: 'Move the focused tool in Tools' }
+	{ keys: ['Ctrl', 'K'], does: 'Search tools, settings and actions (side panel)' },
+	{ keys: ['['], does: 'Open or collapse the toolbar (side panel)' },
+	{ keys: ['↑', '↓'], does: 'Move between tools in the toolbar' },
+	{ keys: ['Alt', '↑ / ↓'], does: 'Move the focused tool in Tools (dashboard)' }
 ];
 
 export function GeneralSection() {

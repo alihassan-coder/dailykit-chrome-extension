@@ -7,7 +7,7 @@ export const SETTINGS_KEY = 'tb:settings';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type Density = 'compact' | 'comfortable';
 export type Corners = 'sharp' | 'soft' | 'round';
-export const ACCENTS = ['cobalt', 'moss', 'plum', 'copper', 'graphite'] as const;
+export const ACCENTS = ['toolbelt', 'cobalt', 'moss', 'plum', 'copper', 'graphite'] as const;
 export type AccentPreset = (typeof ACCENTS)[number];
 /** A preset name, or any colour the user picked as "#rrggbb". */
 export type Accent = AccentPreset | `#${string}`;
@@ -55,11 +55,11 @@ export interface ToolInfo {
 
 export const DEFAULT_THEME: Theme = {
 	mode: 'system',
-	accent: 'cobalt',
+	accent: 'toolbelt',
 	density: 'comfortable',
 	corners: 'soft',
 	textSize: 'default',
-	font: 'toolbelt',
+	font: 'system',
 	contrast: 'standard',
 	motion: 'full',
 	rail: 'icons'

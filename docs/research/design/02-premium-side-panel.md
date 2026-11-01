@@ -122,7 +122,7 @@ This rule is a design inference, not a source. Fall back to right on Chrome < 14
 ### Keyboard
 The rail is a vertical tablist (`ux/01`):
 - ↑/↓ move between tools, Home/End jump to first and last, Enter or Space activate.
-- `Alt+1…9` jumps to the nth tool from anywhere in the panel.
+- Keys `1…9` jump to the nth tool, but only while the rail has focus. Don't use `Alt+1…9`: on Linux, Chrome uses Alt+number to switch tabs **(from memory, unverified)**, and `Ctrl+1…9` switches tabs everywhere.
 - `[` toggles names, Ctrl/Cmd+K focuses search, and Esc closes the overlay rail or palette.
 
 ## 4. Responsive layout (320 → 600+ px)

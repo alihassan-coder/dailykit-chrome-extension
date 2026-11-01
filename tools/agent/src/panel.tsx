@@ -42,7 +42,7 @@ function ApprovalCard({ request, onAnswer }: { request: ApprovalRequest; onAnswe
 		<div
 			role="alertdialog"
 			aria-label="Approve this action"
-			className="grid gap-3 rounded-lg border-2 border-accent bg-surface p-4"
+			className="grid gap-2 rounded-xl border border-accent bg-surface p-3 shadow-float"
 		>
 			<p className="text-xs text-muted">The agent wants to</p>
 			<p className="font-semibold">{request.summary}</p>
@@ -239,13 +239,16 @@ export default function AgentPanel() {
 				{entries.map((entry, i) => {
 					if (entry.kind === 'user')
 						return (
-							<li key={i} className="justify-self-end rounded-lg bg-accent px-3 py-2 text-sm text-on-accent">
+							<li
+								key={i}
+								className="max-w-[85%] justify-self-end rounded-2xl rounded-br-sm bg-accent-soft px-3 py-1.5 text-base text-ink"
+							>
 								{entry.text}
 							</li>
 						);
 					if (entry.kind === 'assistant')
 						return (
-							<li key={i} className="font-read text-[15px] leading-relaxed whitespace-pre-wrap">
+							<li key={i} className="text-base leading-relaxed whitespace-pre-wrap">
 								{entry.text}
 							</li>
 						);
@@ -268,7 +271,7 @@ export default function AgentPanel() {
 			{pending && <ApprovalCard request={pending} onAnswer={(a) => answer.current?.(a)} />}
 			<div ref={end} />
 
-			<form onSubmit={send} className="sticky bottom-0 grid gap-2 bg-bg pt-2">
+			<form onSubmit={send} className="sticky bottom-0 grid gap-1.5 bg-bg pt-2 pb-1">
 				<textarea
 					value={task}
 					onChange={(e) => setTask(e.target.value)}
@@ -282,7 +285,7 @@ export default function AgentPanel() {
 					placeholder="Ask about this page or give it a task"
 					aria-label="Ask the agent"
 					disabled={running}
-					className="w-full resize-none rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-accent disabled:opacity-60"
+					className="w-full resize-none rounded-2xl border border-line bg-surface px-3.5 py-2 text-base outline-none focus:border-accent disabled:opacity-60"
 				/>
 				<div className="flex justify-end">
 					{running ? (

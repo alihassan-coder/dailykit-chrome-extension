@@ -6,6 +6,7 @@ type Mode = 'light' | 'dark';
 
 // Each preset has a light-mode and a dark-mode value, tuned for contrast against that mode's surface.
 export const ACCENT_COLORS: Record<AccentPreset, { name: string; light: string; dark: string; onDark: string }> = {
+	toolbelt: { name: 'Toolbelt blue', light: '#4467f5', dark: '#8ea3ff', onDark: '#0b1540' },
 	cobalt: { name: 'Cobalt', light: '#2e55e6', dark: '#7e98ff', onDark: '#0d1430' },
 	moss: { name: 'Moss', light: '#2f6f4e', dark: '#6cc28f', onDark: '#0b1d13' },
 	plum: { name: 'Plum', light: '#7a3d8f', dark: '#c893dc', onDark: '#22102a' },
@@ -53,6 +54,8 @@ export function themeTokens(theme: Theme, prefersDark: boolean) {
 		vars: {
 			'--tb-accent': accent,
 			'--tb-on-accent': onAccent,
+			// A quiet tint of the accent for selected rows and the current tool.
+			'--tb-accent-soft': mode === 'dark' ? mix(accent, '#202124', 0.72) : mix(accent, '#ffffff', 0.86),
 			'--tb-radius': RADIUS[theme.corners],
 			'--tb-density': DENSITY[theme.density],
 			'--tb-scale': TEXT_SCALE[theme.textSize],

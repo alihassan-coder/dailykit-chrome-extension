@@ -4,18 +4,18 @@ Updated 2026-11-01. One line per request; status: done, in progress, waiting (on
 
 ## Shell and design
 
-| Request                                                                                                           | Status      | Notes                                                                 |
-| ----------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------- |
-| One extension holding many tools, switch tools and features on and off, sort them                                 | done        | Dashboard → Tools                                                     |
-| Customisation (accent incl. custom colour, mode, density, corners, text size, font, contrast, motion, rail style) | done        | Dashboard → Appearance                                                |
-| Global settings (general, AI providers, data and sync, about)                                                     | done        |                                                                       |
-| Logo for every tool                                                                                               | done        | tools/\*/src/icon.tsx                                                 |
-| Side panel redesign: premium, Chrome-native, compact, not like a website                                          | in progress | Research: docs/research/design/. Mockup: docs/design/sidepanel-v2.png |
-| Search bar always on top of the side panel                                                                        | in progress | Part of the redesign                                                  |
-| Tool toolbar on the right edge, minimise / open toggle, styled hover tooltips with names                          | in progress | Part of the redesign                                                  |
-| Responsive from 320 px to 600 px+                                                                                 | in progress | Part of the redesign                                                  |
-| Lots of information, never boring                                                                                 | in progress | Part of the redesign                                                  |
-| New Toolbelt logo, meaningful and detailed                                                                        | waiting     | Research first, then detailed options to choose from                  |
+| Request                                                                                                           | Status      | Notes                                                                       |
+| ----------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------- |
+| One extension holding many tools, switch tools and features on and off, sort them                                 | done        | Dashboard → Tools                                                           |
+| Customisation (accent incl. custom colour, mode, density, corners, text size, font, contrast, motion, rail style) | done        | Dashboard → Appearance                                                      |
+| Global settings (general, AI providers, data and sync, about)                                                     | done        |                                                                             |
+| Logo for every tool                                                                                               | done        | tools/\*/src/icon.tsx                                                       |
+| Side panel redesign: premium, Chrome-native, compact, not like a website                                          | done        | Native tokens, system font, compact screens; research docs/research/design/ |
+| Search bar always on top of the side panel                                                                        | done        | Ctrl/Cmd+K focuses it                                                       |
+| Tool toolbar on the right edge, minimise / open toggle, styled hover tooltips with names                          | done        | `[` toggles; remembered; tooltips with Chrome timing                        |
+| Responsive from 320 px to 600 px+                                                                                 | done        | Container queries; toolbar overlays below 480 px                            |
+| Lots of information, never boring                                                                                 | in progress | Glance summaries and receipts per tool come with each tool                  |
+| New Toolbelt logo, meaningful and detailed                                                                        | done        | Holster; docs/design/logo-directions.html                                   |
 
 ## Accounts, data, sync
 

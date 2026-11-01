@@ -6,3 +6,4 @@ export * from './storage.ts';
 export * from './palette.ts';
 export * from './CommandPalette.tsx';
 export * from './account.ts';
+export * from './Tooltip.tsx';
