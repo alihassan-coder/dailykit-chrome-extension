@@ -1,13 +1,22 @@
 // The dashboard: everything about Toolbelt in one tab. Sections are addressable (#tools, #appearance).
 import { Logo, useSettings } from '@toolbelt/ui';
-import { Palette, Wrench } from 'lucide-react';
+import { Database, Info, KeyRound, Palette, Settings2, Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AboutSection } from './AboutSection.tsx';
+import { AiSection } from './AiSection.tsx';
 import { AppearanceSection } from './AppearanceSection.tsx';
+import { DataSection } from './DataSection.tsx';
+import { GeneralSection } from './GeneralSection.tsx';
 import { ToolsSection } from './ToolsSection.tsx';
 
+// Same ids as shell/commands.ts DASHBOARD_SECTIONS, so the command palette can link straight here.
 const SECTIONS = [
 	{ id: 'tools', label: 'Tools', icon: Wrench, render: () => <ToolsSection /> },
-	{ id: 'appearance', label: 'Appearance', icon: Palette, render: () => <AppearanceSection /> }
+	{ id: 'appearance', label: 'Appearance', icon: Palette, render: () => <AppearanceSection /> },
+	{ id: 'general', label: 'General', icon: Settings2, render: () => <GeneralSection /> },
+	{ id: 'ai', label: 'AI providers', icon: KeyRound, render: () => <AiSection /> },
+	{ id: 'data', label: 'Data and sync', icon: Database, render: () => <DataSection /> },
+	{ id: 'about', label: 'About', icon: Info, render: () => <AboutSection /> }
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]['id'];

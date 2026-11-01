@@ -60,6 +60,41 @@ describe('resolveSettings', () => {
 	});
 });
 
+describe('theme', () => {
+	it('accepts a preset or a custom #rrggbb accent, and nothing else', () => {
+		const accent = (a: unknown) => resolveSettings({ theme: { accent: a } }, tools).theme.accent;
+		expect(accent('plum')).toBe('plum');
+		expect(accent('#ff7a00')).toBe('#ff7a00');
+		for (const bad of ['#FF7A00x', 'orange', '#fff', 7]) expect(accent(bad)).toBe(DEFAULT_THEME.accent);
+	});
+
+	it('keeps every customisation and falls back per field', () => {
+		const t = resolveSettings(
+			{
+				theme: {
+					textSize: 'large',
+					font: 'system',
+					contrast: 'high',
+					motion: 'reduced',
+					rail: 'labels',
+					density: 'huge'
+				}
+			},
+			tools
+		).theme;
+		expect(t).toMatchObject({ textSize: 'large', font: 'system', contrast: 'high', motion: 'reduced', rail: 'labels' });
+		expect(t.density).toBe(DEFAULT_THEME.density);
+	});
+});
+
+describe('general', () => {
+	it('opens the last tool unless a tool that exists was chosen', () => {
+		expect(resolveSettings(undefined, tools).general.startTool).toBe('last');
+		expect(resolveSettings({ general: { startTool: 'notes' } }, tools).general.startTool).toBe('notes');
+		expect(resolveSettings({ general: { startTool: 'gone' } }, tools).general.startTool).toBe('last');
+	});
+});
+
 describe('changes', () => {
 	const base = resolveSettings(undefined, tools);
 

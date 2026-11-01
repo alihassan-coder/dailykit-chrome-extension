@@ -16,12 +16,12 @@ import {
 
 const store = toolValue(localArea, 'grayscale', STATE_KEY, resolveState);
 
-/** The site in the active tab, kept up to date as the user switches tabs or navigates. */
+/** The site in the active tab of this side panel's window, kept up to date as the user switches tabs or navigates. */
 function useCurrentSite() {
 	const [host, setHost] = useState<string | null>(null);
 	useEffect(() => {
 		const read = () =>
-			browser.tabs.query({ active: true, lastFocusedWindow: true }).then(([tab]) => setHost(hostOf(tab?.url)));
+			browser.tabs.query({ active: true, currentWindow: true }).then(([tab]) => setHost(hostOf(tab?.url)));
 		void read();
 		const onUpdated = (_id: number, change: { url?: string }) => change.url && void read();
 		browser.tabs.onActivated.addListener(read);

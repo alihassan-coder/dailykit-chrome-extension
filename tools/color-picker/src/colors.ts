@@ -1,4 +1,8 @@
-// Colour maths for the colour picker: parsing, formats, WCAG contrast and the history list.
+// Colour maths for the colour picker: parsing, formats, WCAG grades and the history list.
+// Contrast itself lives in @toolbelt/core, shared with the theme engine.
+import { contrastRatio, readableOn } from '@toolbelt/core';
+
+export { contrastRatio, readableOn };
 
 export type Hex = `#${string}`;
 
@@ -40,21 +44,6 @@ export function formats(hex: Hex) {
 	};
 }
 
-// WCAG 2.x relative luminance and contrast ratio.
-function luminance(hex: string) {
-	const channel = (v: number) => {
-		const c = v / 255;
-		return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-	};
-	const { r, g, b } = toRgb(hex);
-	return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-}
-
-export function contrastRatio(a: string, b: string): number {
-	const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
-	return (hi + 0.05) / (lo + 0.05);
-}
-
 /** WCAG grade for normal-size text. */
 export function wcagLevel(ratio: number): 'AAA' | 'AA' | 'Large text only' | 'Fails' {
 	if (ratio >= 7) return 'AAA';
@@ -62,9 +51,6 @@ export function wcagLevel(ratio: number): 'AAA' | 'AA' | 'Large text only' | 'Fa
 	if (ratio >= 3) return 'Large text only';
 	return 'Fails';
 }
-
-export const readableOn = (hex: string): Hex =>
-	contrastRatio(hex, '#ffffff') >= contrastRatio(hex, '#000000') ? '#ffffff' : '#000000';
 
 export function addToHistory<T extends string>(history: T[], hex: T, limit = 24): T[] {
 	return [hex, ...history.filter((h) => h !== hex)].slice(0, limit);

@@ -1,11 +1,11 @@
 // Turns the user's theme choices into the --tb-* tokens from styles/ui.css. Every surface applies the same
 // result, so changing the accent in the dashboard restyles the side panel and in-page UI at once.
-import type { Accent, Corners, Density, Theme } from '@toolbelt/core';
+import { mix, readableOn, type Accent, type AccentPreset, type Theme } from '@toolbelt/core';
 
 type Mode = 'light' | 'dark';
 
-// Each accent has a light-mode and a dark-mode value, tuned for contrast against that mode's surface.
-export const ACCENT_COLORS: Record<Accent, { name: string; light: string; dark: string; onDark: string }> = {
+// Each preset has a light-mode and a dark-mode value, tuned for contrast against that mode's surface.
+export const ACCENT_COLORS: Record<AccentPreset, { name: string; light: string; dark: string; onDark: string }> = {
 	cobalt: { name: 'Cobalt', light: '#2e55e6', dark: '#7e98ff', onDark: '#0d1430' },
 	moss: { name: 'Moss', light: '#2f6f4e', dark: '#6cc28f', onDark: '#0b1d13' },
 	plum: { name: 'Plum', light: '#7a3d8f', dark: '#c893dc', onDark: '#22102a' },
@@ -13,34 +13,64 @@ export const ACCENT_COLORS: Record<Accent, { name: string; light: string; dark: 
 	graphite: { name: 'Graphite', light: '#2c3531', dark: '#c9d3ce', onDark: '#141917' }
 };
 
-const RADIUS: Record<Corners, string> = { sharp: '3px', soft: '10px', round: '16px' };
-const DENSITY: Record<Density, string> = { compact: '0.8', comfortable: '1' };
+const RADIUS = { sharp: '3px', soft: '10px', round: '16px' } as const;
+const DENSITY = { compact: '0.8', comfortable: '1' } as const;
+const TEXT_SCALE = { small: '0.92', default: '1', large: '1.08', larger: '1.16' } as const;
+const FONT = {
+	toolbelt: "'Schibsted Grotesk Variable', 'Schibsted Grotesk', 'Segoe UI', system-ui, sans-serif",
+	system: "system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif"
+} as const;
+
+// High contrast pushes secondary text and lines towards the main text colour.
+const HIGH_CONTRAST: Record<Mode, Record<string, string>> = {
+	light: { '--tb-muted': '#2f3a35', '--tb-line': '#8a958f', '--tb-ink': '#000000' },
+	dark: { '--tb-muted': '#d0d9d4', '--tb-line': '#6b7872', '--tb-ink': '#ffffff' }
+};
 
 export function resolveMode(mode: Theme['mode'], prefersDark: boolean): Mode {
 	return mode === 'system' ? (prefersDark ? 'dark' : 'light') : mode;
 }
 
-/** The CSS variables and data-theme value for a theme. Pure, so it is easy to test. */
+const isPreset = (accent: Accent): accent is AccentPreset => accent in ACCENT_COLORS;
+
+/** Accent and the text colour on it, for one mode. A custom colour is lightened for dark mode. */
+export function accentFor(accent: Accent, mode: Mode): { accent: string; onAccent: string } {
+	if (isPreset(accent)) {
+		const c = ACCENT_COLORS[accent];
+		return mode === 'dark' ? { accent: c.dark, onAccent: c.onDark } : { accent: c.light, onAccent: '#ffffff' };
+	}
+	const color = mode === 'dark' ? mix(accent, '#ffffff', 0.25) : accent;
+	return { accent: color, onAccent: readableOn(color) };
+}
+
+/** The CSS variables and data attributes for a theme. Pure, so it is easy to test. */
 export function themeTokens(theme: Theme, prefersDark: boolean) {
 	const mode = resolveMode(theme.mode, prefersDark);
-	const accent = ACCENT_COLORS[theme.accent];
+	const { accent, onAccent } = accentFor(theme.accent, mode);
 	return {
 		mode,
+		motion: theme.motion,
 		vars: {
-			'--tb-accent': mode === 'dark' ? accent.dark : accent.light,
-			'--tb-on-accent': mode === 'dark' ? accent.onDark : '#ffffff',
+			'--tb-accent': accent,
+			'--tb-on-accent': onAccent,
 			'--tb-radius': RADIUS[theme.corners],
-			'--tb-density': DENSITY[theme.density]
-		}
+			'--tb-density': DENSITY[theme.density],
+			'--tb-scale': TEXT_SCALE[theme.textSize],
+			'--tb-font': FONT[theme.font],
+			...(theme.contrast === 'high' ? HIGH_CONTRAST[mode] : {})
+		} as Record<string, string>
 	};
 }
 
 const darkQuery = () => (typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null);
+const CONTRAST_VARS = ['--tb-muted', '--tb-line', '--tb-ink'];
 
 /** Applies a theme to an element (a page's <html>, or the container inside a shadow root). */
 export function applyTheme(el: HTMLElement, theme: Theme) {
-	const { mode, vars } = themeTokens(theme, !!darkQuery()?.matches);
+	const { mode, motion, vars } = themeTokens(theme, !!darkQuery()?.matches);
 	el.dataset.theme = mode;
+	el.dataset.motion = motion;
+	for (const name of CONTRAST_VARS) el.style.removeProperty(name);
 	for (const [name, value] of Object.entries(vars)) el.style.setProperty(name, value);
 }
 

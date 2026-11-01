@@ -8,13 +8,25 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 export type Density = 'compact' | 'comfortable';
 export type Corners = 'sharp' | 'soft' | 'round';
 export const ACCENTS = ['cobalt', 'moss', 'plum', 'copper', 'graphite'] as const;
-export type Accent = (typeof ACCENTS)[number];
+export type AccentPreset = (typeof ACCENTS)[number];
+/** A preset name, or any colour the user picked as "#rrggbb". */
+export type Accent = AccentPreset | `#${string}`;
+export type TextSize = 'small' | 'default' | 'large' | 'larger';
+export type FontChoice = 'toolbelt' | 'system';
+export type Contrast = 'standard' | 'high';
+export type Motion = 'full' | 'reduced';
+export type RailStyle = 'icons' | 'labels';
 
 export interface Theme {
 	mode: ThemeMode;
 	accent: Accent;
 	density: Density;
 	corners: Corners;
+	textSize: TextSize;
+	font: FontChoice;
+	contrast: Contrast;
+	motion: Motion;
+	rail: RailStyle;
 }
 
 export interface ToolSettings {
@@ -22,11 +34,17 @@ export interface ToolSettings {
 	features: Record<string, boolean>;
 }
 
+export interface General {
+	/** What the side panel opens with: the last tool used, or one chosen tool. */
+	startTool: 'last' | string;
+}
+
 export interface Settings {
 	version: 1;
 	tools: Record<string, ToolSettings>;
 	order: string[];
 	theme: Theme;
+	general: General;
 }
 
 /** What settings need to know about a tool. Matches both the descriptor and the runtime registry. */
@@ -35,7 +53,21 @@ export interface ToolInfo {
 	features: { id: string; defaultOn: boolean }[];
 }
 
-export const DEFAULT_THEME: Theme = { mode: 'system', accent: 'cobalt', density: 'comfortable', corners: 'soft' };
+export const DEFAULT_THEME: Theme = {
+	mode: 'system',
+	accent: 'cobalt',
+	density: 'comfortable',
+	corners: 'soft',
+	textSize: 'default',
+	font: 'toolbelt',
+	contrast: 'standard',
+	motion: 'full',
+	rail: 'icons'
+};
+
+const HEX = /^#[0-9a-f]{6}$/;
+const resolveAccent = (v: unknown): Accent =>
+	typeof v === 'string' && (ACCENTS.includes(v as AccentPreset) || HEX.test(v)) ? (v as Accent) : DEFAULT_THEME.accent;
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 const oneOf = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
@@ -45,9 +77,14 @@ function resolveTheme(raw: unknown): Theme {
 	const t = isObject(raw) ? raw : {};
 	return {
 		mode: oneOf(t.mode, ['system', 'light', 'dark'], DEFAULT_THEME.mode),
-		accent: oneOf(t.accent, ACCENTS, DEFAULT_THEME.accent),
+		accent: resolveAccent(t.accent),
 		density: oneOf(t.density, ['compact', 'comfortable'], DEFAULT_THEME.density),
-		corners: oneOf(t.corners, ['sharp', 'soft', 'round'], DEFAULT_THEME.corners)
+		corners: oneOf(t.corners, ['sharp', 'soft', 'round'], DEFAULT_THEME.corners),
+		textSize: oneOf(t.textSize, ['small', 'default', 'large', 'larger'], DEFAULT_THEME.textSize),
+		font: oneOf(t.font, ['toolbelt', 'system'], DEFAULT_THEME.font),
+		contrast: oneOf(t.contrast, ['standard', 'high'], DEFAULT_THEME.contrast),
+		motion: oneOf(t.motion, ['full', 'reduced'], DEFAULT_THEME.motion),
+		rail: oneOf(t.rail, ['icons', 'labels'], DEFAULT_THEME.rail)
 	};
 }
 
@@ -72,7 +109,16 @@ export function resolveSettings(raw: unknown, tools: ToolInfo[]): Settings {
 	const order = savedOrder.filter((id): id is string => typeof id === 'string' && known.has(id));
 	for (const t of tools) if (!order.includes(t.id)) order.push(t.id);
 
-	return { version: 1, tools: resolved, order: [...new Set(order)], theme: resolveTheme(saved.theme) };
+	const general = isObject(saved.general) ? saved.general : {};
+	const startTool = typeof general.startTool === 'string' && known.has(general.startTool) ? general.startTool : 'last';
+
+	return {
+		version: 1,
+		tools: resolved,
+		order: [...new Set(order)],
+		theme: resolveTheme(saved.theme),
+		general: { startTool }
+	};
 }
 
 export function setToolEnabled(s: Settings, toolId: string, enabled: boolean): Settings {
@@ -103,6 +149,10 @@ export function moveTool(s: Settings, toolId: string, toIndex: number): Settings
 
 export function setTheme(s: Settings, patch: Partial<Theme>): Settings {
 	return { ...s, theme: resolveTheme({ ...s.theme, ...patch }) };
+}
+
+export function setGeneral(s: Settings, patch: Partial<General>): Settings {
+	return { ...s, general: { ...s.general, ...patch } };
 }
 
 export function orderedTools<T extends { id: string }>(s: Settings, tools: T[]): T[] {

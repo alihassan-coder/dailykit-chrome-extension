@@ -115,8 +115,18 @@ export function IconButton({
 	);
 }
 
-/** A tool's square mark, echoing the four-square logo. */
-export function ToolMark({ name, active, size = 'md' }: { name: string; active?: boolean; size?: 'sm' | 'md' }) {
+/** A tool's square tile with its logo (or initials until it has one), echoing the four-square logo. */
+export function ToolMark({
+	name,
+	icon,
+	active,
+	size = 'md'
+}: {
+	name: string;
+	icon?: ReactNode;
+	active?: boolean;
+	size?: 'sm' | 'md' | 'lg';
+}) {
 	const initials = name
 		.split(/\s+/)
 		.map((w) => w[0])
@@ -126,13 +136,22 @@ export function ToolMark({ name, active, size = 'md' }: { name: string; active?:
 		<span
 			aria-hidden="true"
 			className={cx(
-				'grid shrink-0 place-items-center rounded-sm font-semibold',
-				size === 'md' ? 'size-8 text-sm' : 'size-6 text-xs',
+				'grid shrink-0 place-items-center rounded-md font-semibold transition-colors',
+				size === 'sm' && 'size-6 text-xs',
+				size === 'md' && 'size-8 text-sm',
+				size === 'lg' && 'size-11 text-base',
 				active ? 'bg-accent text-on-accent' : 'bg-soft text-ink'
 			)}
 		>
-			{initials}
+			{icon ?? initials}
 		</span>
+	);
+}
+
+/** Keyboard key, for shortcut hints. */
+export function Kbd({ children }: { children: ReactNode }) {
+	return (
+		<kbd className="rounded-sm border border-line bg-surface px-1.5 py-px font-ui text-xs text-muted">{children}</kbd>
 	);
 }
 

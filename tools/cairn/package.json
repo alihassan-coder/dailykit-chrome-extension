@@ -6,7 +6,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./entries/*": "./src/entries/*",
-		"./panel": "./src/panel.tsx"
+		"./panel": "./src/panel.tsx",
+		"./icon": "./src/icon.tsx"
 	},
 	"scripts": {
 		"typecheck": "tsc -p ."

@@ -4,7 +4,7 @@ import { moveTool, setFeature, setToolEnabled, orderedTools } from '@toolbelt/co
 import { IconButton, Switch, ToolMark, useSettings } from '@toolbelt/ui';
 import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
-import { sitesLabel, tools, type ToolEntry } from '../../shell/tools.ts';
+import { icons, sitesLabel, tools, type ToolEntry } from '../../shell/tools.ts';
 
 function ToolRow({
 	tool,
@@ -22,6 +22,7 @@ function ToolRow({
 	const { settings, update } = useSettings();
 	const state = settings.tools[tool.id];
 	const on = !!state?.enabled;
+	const Icon = icons[tool.id];
 
 	function onKeyDown(e: KeyboardEvent) {
 		if (!e.altKey) return;
@@ -41,7 +42,7 @@ function ToolRow({
 				<span className="cursor-grab text-muted" aria-hidden="true">
 					<GripVertical size={16} />
 				</span>
-				<ToolMark name={tool.name} active={on} />
+				<ToolMark name={tool.name} icon={Icon ? <Icon size={18} /> : undefined} active={on} />
 				<div className="min-w-0 flex-1">
 					<p className="font-semibold">{tool.name}</p>
 					<p className="truncate text-sm text-muted">{tool.description}</p>
