@@ -1,0 +1,19 @@
+{
+	"name": "@toolbelt/wxt-kit",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./registry": "./src/registry.d.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc -p ."
+	},
+	"dependencies": {
+		"@toolbelt/core": "workspace:*"
+	},
+	"devDependencies": {
+		"wxt": "0.21.5"
+	}
+}

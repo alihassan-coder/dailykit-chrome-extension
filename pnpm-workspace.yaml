@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+  - tools/*
+
+# Install scripts are opt-in (pnpm blocks unknown ones). List every decision here.
+allowBuilds:
+  esbuild: true
+  unrs-resolver: false

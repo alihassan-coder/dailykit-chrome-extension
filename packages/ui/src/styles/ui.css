@@ -1,0 +1,97 @@
+/* Toolbelt UI stylesheet. Imported by every surface: extension pages normally, in-page UI inside a shadow root.
+   Tailwind's default palette and scales are cleared, so every class resolves to a Toolbelt token. */
+@import 'tailwindcss' source(none);
+@source '../';
+@source '../../../../tools';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme {
+	--*: initial;
+}
+
+/* Sizes are px on purpose: rem follows the host page's root font size inside a shadow root. */
+@theme inline {
+	--spacing: calc(4px * var(--tb-density));
+
+	--color-bg: var(--tb-bg);
+	--color-surface: var(--tb-surface);
+	--color-soft: var(--tb-soft);
+	--color-line: var(--tb-line);
+	--color-ink: var(--tb-ink);
+	--color-muted: var(--tb-muted);
+	--color-accent: var(--tb-accent);
+	--color-on-accent: var(--tb-on-accent);
+	--color-ok: var(--tb-ok);
+	--color-warn: var(--tb-warn);
+	--color-danger: var(--tb-danger);
+
+	--font-ui: 'Schibsted Grotesk', 'Segoe UI', system-ui, sans-serif;
+	--font-read: 'Source Serif 4', Georgia, serif;
+	--font-mono: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+
+	--text-xs: calc(12px * var(--tb-scale));
+	--text-xs--line-height: 1.4;
+	--text-sm: calc(13px * var(--tb-scale));
+	--text-sm--line-height: 1.45;
+	--text-base: calc(14px * var(--tb-scale));
+	--text-base--line-height: 1.5;
+	--text-lg: calc(16px * var(--tb-scale));
+	--text-lg--line-height: 1.4;
+	--text-xl: calc(20px * var(--tb-scale));
+	--text-xl--line-height: 1.25;
+
+	--font-weight-normal: 400;
+	--font-weight-medium: 500;
+	--font-weight-semibold: 600;
+
+	--radius-sm: max(2px, calc(var(--tb-radius) - 4px));
+	--radius-md: var(--tb-radius);
+	--radius-lg: calc(var(--tb-radius) + 4px);
+	--radius-full: 9999px;
+
+	--shadow-float: 0 1px 2px rgb(0 0 0 / 0.08), 0 12px 32px -12px rgb(0 0 0 / 0.28);
+
+	--ease-out: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Default token values (light). The theme engine overwrites these on the root element at runtime. */
+:root,
+:host,
+[data-tb-root] {
+	--tb-density: 1;
+	--tb-scale: 1;
+	--tb-radius: 10px;
+	--tb-bg: #f6f7f4;
+	--tb-surface: #ffffff;
+	--tb-soft: #eef1ed;
+	--tb-line: #e1e5e0;
+	--tb-ink: #18211d;
+	--tb-muted: #66736c;
+	--tb-accent: #2e55e6;
+	--tb-on-accent: #ffffff;
+	--tb-ok: #2f7a4f;
+	--tb-warn: #a8670f;
+	--tb-danger: #b3362b;
+}
+
+[data-theme='dark'] {
+	--tb-bg: #141917;
+	--tb-surface: #1b211e;
+	--tb-soft: #222a26;
+	--tb-line: #2a332f;
+	--tb-ink: #e6ece8;
+	--tb-muted: #94a29a;
+	--tb-accent: #7e98ff;
+	--tb-on-accent: #10140f;
+	--tb-ok: #6cc28f;
+	--tb-warn: #e0a24a;
+	--tb-danger: #ef7d71;
+}
+
+[data-tb-root] {
+	font-family: var(--font-ui);
+	font-size: var(--text-base);
+	color: var(--tb-ink);
+	-webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Toolbelt Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: a working blueprint. Left-aligned reading column; the mockups sit on a "bench" band you can restyle live. */
+:root {
+  --bg: #eef0ec;        /* bench grey, faint green bias */
+  --paper: #fbfcfa;
+  --ink: #17201c;
+  --muted: #5b6862;
+  --line: #d3d9d3;
+  --accent: #2e55e6;    /* signal cobalt */
+  --ok: #2f7a4f;
+  --warn: #a8670f;
+  --f-ui: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --f-read: "Source Serif 4", Georgia, "Times New Roman", serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111513; --paper: #181d1a; --ink: #e5ebe7; --muted: #93a099; --line: #2b3430;
+    --accent: #7e98ff; --ok: #6cc28f; --warn: #e0a24a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111513; --paper: #181d1a; --ink: #e5ebe7; --muted: #93a099; --line: #2b3430;
+  --accent: #7e98ff; --ok: #6cc28f; --warn: #e0a24a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 72px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 56px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 24px; font-weight: 650; letter-spacing: -0.01em; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; max-width: 66ch; }
+.lede { color: var(--muted); font-size: 17px; margin-top: 12px; }
+header .mark { display: flex; gap: 14px; align-items: center; margin-bottom: 18px; }
+.logo { width: 36px; height: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.logo i { border-radius: 3px; background: var(--ink); }
+.logo i:nth-child(2) { background: var(--accent); }
+.logo i:nth-child(3) { opacity: .45; }
+.logo i:nth-child(4) { opacity: .2; }
+section { display: grid; gap: 20px; }
+.sub { color: var(--muted); }
+
+/* ---- controls ---- */
+.controls { display: flex; flex-wrap: wrap; gap: 20px 32px; align-items: end; }
+.ctl { display: grid; gap: 8px; }
+.ctl > span { font-size: 13px; color: var(--muted); font-weight: 500; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--paper); }
+.seg button { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--ink); padding: 7px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.swatches { display: flex; gap: 8px; }
+.swatches button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; outline-offset: 2px; }
+.swatches button[aria-pressed="true"] { border-color: var(--ink); }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- the bench: mockups ---- */
+.bench { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 860px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.cap { font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+/* Kit tokens: what a user's theme controls. Modules only ever read these. */
+.kit {
+  --k-bg: #f6f7f4; --k-surface: #ffffff; --k-ink: #18211d; --k-muted: #66736c; --k-line: #e1e5e0; --k-soft: #eef1ed;
+  --k-accent: #2e55e6; --k-on-accent: #ffffff; --k-ok: #2f7a4f; --k-warn: #a8670f;
+  --k-r: 10px; --k-gap: 12px; --k-pad: 14px; --k-row: 40px; --k-fs: 14px;
+  font-family: var(--f-ui); font-size: var(--k-fs); color: var(--k-ink); background: var(--k-bg);
+  border: 1px solid var(--line); border-radius: calc(var(--k-r) + 6px); overflow: hidden;
+  box-shadow: 0 1px 0 rgba(20, 30, 25, .04), 0 18px 40px -24px rgba(20, 30, 25, .35);
+}
+.kit[data-mode="dark"] {
+  --k-bg: #141917; --k-surface: #1b211e; --k-ink: #e6ece8; --k-muted: #94a29a; --k-line: #2a332f; --k-soft: #222a26;
+  --k-ok: #6cc28f; --k-warn: #e0a24a; color-scheme: dark;
+}
+.kit[data-density="compact"] { --k-gap: 8px; --k-pad: 10px; --k-row: 32px; --k-fs: 13px; }
+.kit[data-corners="sharp"] { --k-r: 3px; }
+.kit[data-corners="round"] { --k-r: 16px; }
+
+/* side panel */
+.sp-top { display: flex; align-items: center; justify-content: space-between; padding: var(--k-pad); border-bottom: 1px solid var(--k-line); background: var(--k-surface); }
+.sp-brand { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+.sp-brand .logo { width: 18px; height: 18px; gap: 2px; }
+.sp-brand .logo i { background: var(--k-ink); border-radius: 2px; }
+.sp-brand .logo i:nth-child(2) { background: var(--k-accent); }
+.kbd { font-size: 12px; color: var(--k-muted); border: 1px solid var(--k-line); border-radius: 5px; padding: 1px 6px; }
+.tabs { display: flex; gap: 4px; padding: 8px var(--k-pad) 0; background: var(--k-surface); border-bottom: 1px solid var(--k-line); }
+.tabs button { font: inherit; border: 0; background: none; color: var(--k-muted); padding: 8px 10px 10px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--k-ink); border-bottom-color: var(--k-accent); font-weight: 600; }
+.sp-body { padding: var(--k-pad); display: grid; gap: var(--k-gap); }
+.block { background: var(--k-surface); border: 1px solid var(--k-line); border-radius: var(--k-r); padding: var(--k-pad); display: grid; gap: var(--k-gap); }
+.meter-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.big { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.small { font-size: .9em; color: var(--k-muted); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; border-radius: 99px; background: var(--k-soft); overflow: hidden; }
+.bar b { display: block; height: 100%; border-radius: inherit; background: var(--k-accent); }
+.bar.warn b { background: var(--k-warn); }
+.usage { display: grid; grid-template-columns: 1fr 1fr; gap: var(--k-gap); }
+.usage > div { display: grid; gap: 6px; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn { font: inherit; display: flex; align-items: center; gap: 8px; min-height: var(--k-row); padding: 0 12px; border-radius: calc(var(--k-r) - 2px); border: 1px solid var(--k-line); background: var(--k-surface); color: var(--k-ink); cursor: pointer; text-align: left; }
+.btn.primary { background: var(--k-accent); color: var(--k-on-accent); border-color: transparent; font-weight: 600; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.list { display: grid; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: var(--k-row); border-top: 1px solid var(--k-line); }
+.row:first-child { border-top: 0; }
+.row .t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip { font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--k-soft); color: var(--k-muted); white-space: nowrap; }
+.chip.ok { color: var(--k-ok); }
+.reader { font-family: var(--f-read); font-size: 1.05em; line-height: 1.6; color: var(--k-ink); }
+.reader .who { font-family: var(--f-ui); font-size: 12px; color: var(--k-muted); font-weight: 600; }
+
+/* dashboard */
+.db { display: grid; grid-template-columns: 170px minmax(0, 1fr); min-height: 100%; }
+@media (max-width: 560px) { .db { grid-template-columns: minmax(0, 1fr); } .db nav { display: none; } }
+.db nav { background: var(--k-surface); border-right: 1px solid var(--k-line); padding: var(--k-pad); display: grid; align-content: start; gap: 2px; }
+.db nav a { display: block; padding: 7px 10px; border-radius: calc(var(--k-r) - 4px); color: var(--k-muted); text-decoration: none; }
+.db nav a.on { background: var(--k-soft); color: var(--k-ink); font-weight: 600; }
+.db main { padding: calc(var(--k-pad) + 6px); display: grid; gap: var(--k-gap); align-content: start; min-width: 0; }
+.db-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+.db-head h3 { font-size: 20px; }
+.mods { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.mod { background: var(--k-surface); border: 1px solid var(--k-line); border-radius: var(--k-r); }
+.mod.dragging { opacity: .5; }
+.mod.over { border-color: var(--k-accent); }
+.mod-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px var(--k-pad); }
+.grip { cursor: grab; color: var(--k-muted); display: grid; place-items: center; width: 18px; }
+.ico { width: 30px; height: 30px; border-radius: calc(var(--k-r) - 3px); display: grid; place-items: center; background: var(--k-soft); color: var(--k-ink); font-weight: 700; font-size: 13px; }
+.mod .name { font-weight: 600; }
+.mod .desc { color: var(--k-muted); font-size: .92em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mod.off .name, .mod.off .ico { opacity: .45; }
+.sw { position: relative; width: 36px; height: 20px; border-radius: 99px; border: 0; background: var(--k-line); cursor: pointer; padding: 0; flex: none; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.sw[aria-checked="true"] { background: var(--k-accent); }
+.sw[aria-checked="true"]::after { transform: translateX(16px); }
+.expand { font: inherit; border: 0; background: none; color: var(--k-muted); cursor: pointer; padding: 4px; }
+.feats { border-top: 1px solid var(--k-line); padding: 6px var(--k-pad) 10px calc(var(--k-pad) + 72px); display: grid; }
+.feats .row { min-height: calc(var(--k-row) - 4px); }
+@media (max-width: 560px) { .feats { padding-left: var(--k-pad); } .mod-row { grid-template-columns: auto auto minmax(0, 1fr) auto; } .mod-row .chip { display: none; } }
+.status { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* in-page dock */
+.page-mock { position: relative; height: 210px; background: var(--k-bg); }
+.page-mock .lines { position: absolute; inset: 22px 22px auto; display: grid; gap: 10px; }
+.page-mock .lines i { display: block; height: 9px; border-radius: 99px; background: var(--k-soft); }
+.page-mock .composer { position: absolute; left: 22px; right: 92px; bottom: 20px; height: 44px; border-radius: var(--k-r); border: 1px solid var(--k-line); background: var(--k-surface); }
+.dock { position: absolute; right: 20px; bottom: 20px; display: flex; align-items: center; gap: 8px; }
+.dock .save { font: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 99px; border: 0; background: var(--k-accent); color: var(--k-on-accent); }
+.dock .orb { width: 44px; height: 44px; border-radius: 50%; background: var(--k-ink); display: grid; place-items: center; }
+.dock .orb .logo { width: 18px; height: 18px; gap: 2px; }
+.dock .orb .logo i { background: var(--k-bg); border-radius: 2px; }
+.dock .orb .logo i:nth-child(2) { background: var(--k-accent); }
+
+/* ---- plan ---- */
+.phases { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.phases li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.phases .n { font-size: 28px; font-weight: 650; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+.phases p { color: var(--muted); margin-top: 6px; }
+.twocol { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+@media (max-width: 860px) { .twocol { grid-template-columns: minmax(0, 1fr); } }
+pre { margin: 0; overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; font: 13px/1.6 ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; color: var(--ink); }
+pre .c { color: var(--muted); }
+.note { border-left: 3px solid var(--warn); padding: 4px 0 4px 14px; color: var(--muted); max-width: 66ch; }
+ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 8px; max-width: 66ch; }
+ul.plain li::marker { color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .sw::after { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="mark"><div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div><strong>Toolbelt</strong></div>
+    <h1>One extension for every tool you build</h1>
+    <p class="lede">The plan and a first look at the design, for review before any code is written. Cairn becomes the first module: its engine is kept, and every screen is redesigned. Change the theme below to see how one set of tokens restyles every module.</p>
+  </header>
+
+  <section aria-labelledby="look">
+    <h2 id="look">Try the look</h2>
+    <div class="controls" role="group" aria-label="Theme controls">
+      <div class="ctl"><span>Accent</span>
+        <div class="swatches" id="accent">
+          <button aria-label="Cobalt" aria-pressed="true" data-v="#2e55e6" data-d="#7e98ff" style="background:#2e55e6"></button>
+          <button aria-label="Moss" aria-pressed="false" data-v="#2f6f4e" data-d="#6cc28f" style="background:#2f6f4e"></button>
+          <button aria-label="Plum" aria-pressed="false" data-v="#7a3d8f" data-d="#c893dc" style="background:#7a3d8f"></button>
+          <button aria-label="Copper" aria-pressed="false" data-v="#a3521c" data-d="#e39a62" style="background:#a3521c"></button>
+          <button aria-label="Graphite" aria-pressed="false" data-v="#2c3531" data-d="#c9d3ce" style="background:#2c3531"></button>
+        </div>
+      </div>
+      <div class="ctl"><span>Mode</span>
+        <div class="seg" data-attr="mode"><button aria-pressed="true" data-v="light">Light</button><button aria-pressed="false" data-v="dark">Dark</button></div>
+      </div>
+      <div class="ctl"><span>Density</span>
+        <div class="seg" data-attr="density"><button aria-pressed="false" data-v="compact">Compact</button><button aria-pressed="true" data-v="comfortable">Comfortable</button></div>
+      </div>
+      <div class="ctl"><span>Corners</span>
+        <div class="seg" data-attr="corners"><button aria-pressed="false" data-v="sharp">Sharp</button><button aria-pressed="true" data-v="soft">Soft</button><button aria-pressed="false" data-v="round">Round</button></div>
+      </div>
+    </div>
+
+    <div class="bench">
+      <div>
+        <div class="kit" data-mode="light" data-density="comfortable" data-corners="soft">
+          <div class="sp-top">
+            <div class="sp-brand"><div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>Cairn</div>
+            <span class="kbd">Ctrl K</span>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Cairn views">
+            <button role="tab" aria-selected="true" data-tab="now">Now</button>
+            <button role="tab" aria-selected="false" data-tab="insert">Insert</button>
+            <button role="tab" aria-selected="false" data-tab="saved">Saved</button>
+          </div>
+          <div class="sp-body" data-pane="now">
+            <div class="block">
+              <div class="meter-head"><span>Context used</span><span class="small">124k of 200k tokens</span></div>
+              <div class="big">62%</div>
+              <div class="bar"><b style="width:62%"></b></div>
+            </div>
+            <div class="block">
+              <div class="usage">
+                <div><span class="small">Session</span><strong style="font-variant-numeric:tabular-nums">48%</strong><div class="bar"><b style="width:48%"></b></div><span class="small">Resets in 2h 10m</span></div>
+                <div><span class="small">Weekly</span><strong style="font-variant-numeric:tabular-nums">81%</strong><div class="bar warn"><b style="width:81%"></b></div><span class="small">At this pace: Thu</span></div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn primary"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 2.5h8v11l-4-3-4 3z"/></svg>Save chat</button>
+              <button class="btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h10v10H3zM6 3v10"/></svg>Library</button>
+              <button class="btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="5.5"/><path d="M5.5 8h5"/></svg>Private chat</button>
+              <button class="btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h10M8 3l5 5-5 5"/></svg>Handoff</button>
+            </div>
+          </div>
+          <div class="sp-body" data-pane="insert" hidden>
+            <div class="block list">
+              <div class="row"><span class="t">Last answer as a quote</span><span class="chip">Alt 1</span></div>
+              <div class="row"><span class="t">Code from the last answer</span><span class="chip">Alt 2</span></div>
+              <div class="row"><span class="t">Last 5 messages</span><span class="chip">Alt 3</span></div>
+              <div class="row"><span class="t">{{review}} Review this diff for bugs</span><span class="chip">Snippet</span></div>
+              <div class="row"><span class="t">{{handoff}} Summarize for a fresh chat</span><span class="chip">Snippet</span></div>
+            </div>
+          </div>
+          <div class="sp-body" data-pane="saved" hidden>
+            <div class="block list">
+              <div class="row"><span class="t">Pricing page copy, v3</span><span class="chip ok">Synced</span></div>
+              <div class="row"><span class="t">Neon RLS policy draft</span><span class="chip ok">Synced</span></div>
+              <div class="row"><span class="t">Interview prep, system design</span><span class="chip">This device</span></div>
+            </div>
+            <div class="block reader">
+              <span class="who">You</span>
+              <span>Write the RLS policy so each buyer only sees their own saved chats.</span>
+            </div>
+          </div>
+        </div>
+        <p class="cap">Side panel: the everyday home. Each module gets its own tab set; Ctrl K searches across all of them.</p>
+      </div>
+
+      <div style="display:grid;gap:28px;min-width:0">
+        <div>
+          <div class="kit" data-mode="light" data-density="comfortable" data-corners="soft">
+            <div class="db">
+              <nav aria-label="Dashboard sections">
+                <a class="on" href="#look">Tools</a><a href="#look">Appearance</a><a href="#look">Data and sync</a><a href="#look">Shortcuts</a><a href="#look">Backups</a>
+              </nav>
+              <main>
+                <div class="db-head">
+                  <div><h3>Tools</h3><span class="small">Drag to reorder. Order sets the side panel and popup.</span></div>
+                  <div class="status"><span class="chip ok">Database up to date, v3</span><span class="chip">Last sync 2 min ago</span></div>
+                </div>
+                <ul class="mods" id="mods">
+                  <li class="mod" draggable="true">
+                    <div class="mod-row">
+                      <span class="grip" aria-hidden="true">⋮⋮</span><span class="ico">Ca</span>
+                      <div style="min-width:0"><div class="name">Cairn</div><div class="desc">Save private Claude and ChatGPT chats, usage and context</div></div>
+                      <span class="chip">0.13.0</span>
+                      <button class="sw" role="switch" aria-checked="true" aria-label="Cairn on"></button>
+                    </div>
+                    <div class="feats">
+                      <div class="row"><span class="t">Quote button on selected text</span><button class="sw" role="switch" aria-checked="true" aria-label="Quote button"></button></div>
+                      <div class="row"><span class="t">Snippet codes while typing</span><button class="sw" role="switch" aria-checked="true" aria-label="Snippet codes"></button></div>
+                      <div class="row"><span class="t">Long-chat warning at 70% and 90%</span><button class="sw" role="switch" aria-checked="true" aria-label="Long-chat warning"></button></div>
+                      <div class="row"><span class="t">Sync saved chats to Neon</span><button class="sw" role="switch" aria-checked="false" aria-label="Sync to Neon"></button></div>
+                    </div>
+                  </li>
+                  <li class="mod" draggable="true">
+                    <div class="mod-row">
+                      <span class="grip" aria-hidden="true">⋮⋮</span><span class="ico">Ag</span>
+                      <div style="min-width:0"><div class="name">Agent</div><div class="desc">Your personal agent beside any page (planned)</div></div>
+                      <span class="chip">planned</span>
+                      <button class="sw" role="switch" aria-checked="false" aria-label="Agent on"></button>
+                    </div>
+                  </li>
+                  <li class="mod" draggable="true">
+                    <div class="mod-row">
+                      <span class="grip" aria-hidden="true">⋮⋮</span><span class="ico">+</span>
+                      <div style="min-width:0"><div class="name">Your next tool</div><div class="desc">One folder in modules/, listed here automatically</div></div>
+                      <span class="chip">template</span>
+                      <button class="sw" role="switch" aria-checked="false" aria-label="Template on"></button>
+                    </div>
+                  </li>
+                </ul>
+              </main>
+            </div>
+          </div>
+          <p class="cap">Dashboard: sort tools, switch whole tools or single features on and off, see database and sync state.</p>
+        </div>
+
+        <div>
+          <div class="kit" data-mode="light" data-density="comfortable" data-corners="soft">
+            <div class="page-mock" aria-label="A chat page with the Toolbelt dock">
+              <div class="lines"><i style="width:62%"></i><i style="width:88%"></i><i style="width:74%"></i><i style="width:40%"></i></div>
+              <div class="composer"></div>
+              <div class="dock"><span class="save">Save chat</span><span class="orb"><span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span></span></div>
+            </div>
+          </div>
+          <p class="cap">In-page: only when a tool needs it. Here, a private Claude chat shows the Save chip next to the dock.</p>
+        </div>
+      </div>
+    </div>
+    <p class="sub">Every colour, gap, row height and corner above comes from about a dozen theme tokens. Modules are not allowed to hard-code their own, so one theme change restyles every tool at once.</p>
+  </section>
+
+  <section aria-labelledby="plan">
+    <h2 id="plan">Build order</h2>
+    <ol class="phases">
+      <li><span class="n">1</span><div><h3>Foundations</h3><p>Git and a private GitHub repo. Workspace with WXT, TypeScript, React and Tailwind. A lint rule that stops modules importing each other. CI builds every target on each push. Changesets for versions: each tool has its own version, and Toolbelt has its own.</p></div></li>
+      <li><span class="n">2</span><div><h3>Core, test-first</h3><p>Module registry (each tool declares its name, sites, permissions, features and settings), per-tool storage, the migration runner, an event bus between tools, the theme tokens and the UI kit.</p></div></li>
+      <li><span class="n">3</span><div><h3>Shell</h3><p>Side panel as the main home, the dashboard (sort tools, switches, settings, appearance), a small popup for quick actions, and Ctrl K search across every tool.</p></div></li>
+      <li><span class="n">4</span><div><h3>Cairn module</h3><p>Port the engine with its tests: page bridge, Claude and ChatGPT adapters, chat parsing, saving, lock. Redesign every screen in the new kit. Bring back the snippet fill-in form. Import existing saved chats once.</p></div></li>
+      <li><span class="n">5</span><div><h3>Neon personal sync</h3><p>Paste your connection string once; only the background worker uses it. Each tool's SQL migrations run in order and are recorded. Sync is switched on per tool.</p></div></li>
+      <li><span class="n">6</span><div><h3>Standalone builds</h3><p>Cairn built as its own extension from the same code. GitHub Actions produces release zips for Toolbelt and for each tool you sell.</p></div></li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="shape">
+    <h2 id="shape">How it stays manageable</h2>
+    <div class="twocol">
+      <div style="display:grid;gap:14px;min-width:0">
+        <pre><span class="c"># draft, finalised after the research comes back</span>
+toolbelt/
+  apps/
+    toolbelt/          <span class="c">the bundle: every tool</span>
+    cairn/             <span class="c">Cairn sold on its own</span>
+  packages/
+    core/              <span class="c">registry, storage, migrations, bus, sync</span>
+    ui/                <span class="c">theme tokens and components</span>
+  modules/
+    cairn/
+      module.ts        <span class="c">name, sites, permissions, features</span>
+      engine/          <span class="c">bridge, adapters, parsing</span>
+      ui/              <span class="c">panel tabs, library, dock</span>
+      db/
+        local/         <span class="c">browser data migrations</span>
+        neon/          <span class="c">0001_init.sql, 0002_...</span>
+      tests/
+  docs/
+    ARCHITECTURE.md
+    research/</pre>
+      </div>
+      <div style="display:grid;gap:18px;align-content:start">
+        <ul class="plain">
+          <li><strong>One folder per tool.</strong> Adding a tool means copying the template. It appears in the dashboard with its own switch, settings and version.</li>
+          <li><strong>Tools only talk through core.</strong> No tool imports another, and the build fails if one tries. That is what makes selling one tool alone possible.</li>
+          <li><strong>Small features are declared, not hidden.</strong> Each tool lists its features in module.ts, and the dashboard turns that list into switches.</li>
+          <li><strong>Database changes are numbered files.</strong> Browser data and Neon tables both migrate in order, once, with a record of what ran. The dashboard shows the current version.</li>
+          <li><strong>Every release has a version.</strong> A changelog entry per change, tags on GitHub, zips built by CI.</li>
+        </ul>
+        <p class="note">Still open: whether apps and packages become a full monorepo or one package with several build configs. The research running now decides it.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const kits = () => document.querySelectorAll('.kit');
+  let accent = { v: '#2e55e6', d: '#7e98ff' };
+  let mode = 'light';
+  function paint() {
+    kits().forEach(k => {
+      k.dataset.mode = mode;
+      k.style.setProperty('--k-accent', mode === 'dark' ? accent.d : accent.v);
+      k.style.setProperty('--k-on-accent', mode === 'dark' ? '#10140f' : '#ffffff');
+    });
+  }
+  document.querySelectorAll('#accent button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#accent button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    accent = { v: b.dataset.v, d: b.dataset.d };
+    paint();
+  }));
+  document.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    const attr = seg.dataset.attr;
+    if (attr === 'mode') mode = b.dataset.v;
+    else kits().forEach(k => (k.dataset[attr] = b.dataset.v));
+    paint();
+  })));
+
+  // side panel tabs
+  const tabs = document.querySelectorAll('[role="tab"]');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.setAttribute('aria-selected', String(x === t)));
+    document.querySelectorAll('[data-pane]').forEach(p => (p.hidden = p.dataset.pane !== t.dataset.tab));
+  }));
+
+  // switches
+  document.querySelectorAll('.sw').forEach(s => s.addEventListener('click', () => {
+    const on = s.getAttribute('aria-checked') !== 'true';
+    s.setAttribute('aria-checked', String(on));
+    const mod = s.closest('.mod-row')?.parentElement;
+    if (mod) mod.classList.toggle('off', !on);
+  }));
+  document.querySelectorAll('.mod').forEach(m => {
+    const s = m.querySelector('.mod-row .sw');
+    if (s && s.getAttribute('aria-checked') !== 'true') m.classList.add('off');
+  });
+
+  // drag to reorder
+  const list = document.getElementById('mods');
+  let dragged = null;
+  list.addEventListener('dragstart', e => { dragged = e.target.closest('.mod'); dragged?.classList.add('dragging'); try { e.dataTransfer.setData('text/plain', ''); } catch {} });
+  list.addEventListener('dragend', () => { dragged?.classList.remove('dragging'); list.querySelectorAll('.over').forEach(x => x.classList.remove('over')); dragged = null; });
+  list.addEventListener('dragover', e => {
+    e.preventDefault();
+    const over = e.target.closest('.mod');
+    list.querySelectorAll('.over').forEach(x => x !== over && x.classList.remove('over'));
+    if (!over || over === dragged) return;
+    over.classList.add('over');
+    const r = over.getBoundingClientRect();
+    list.insertBefore(dragged, e.clientY > r.top + r.height / 2 ? over.nextSibling : over);
+  });
+  list.addEventListener('drop', e => e.preventDefault());
+  paint();
+})();
+</script>
+</body>
+</html>

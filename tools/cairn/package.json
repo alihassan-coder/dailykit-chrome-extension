@@ -1,0 +1,25 @@
+{
+	"name": "@toolbelt/tool-cairn",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./entries/*": "./src/entries/*"
+	},
+	"scripts": {
+		"typecheck": "tsc -p ."
+	},
+	"dependencies": {
+		"@toolbelt/core": "workspace:*",
+		"@toolbelt/ui": "workspace:*",
+		"react": "19.3.1",
+		"react-dom": "19.3.1",
+		"radix-ui": "1.8.1"
+	},
+	"devDependencies": {
+		"wxt": "0.21.5",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0"
+	}
+}

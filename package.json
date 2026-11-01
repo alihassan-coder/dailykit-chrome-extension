@@ -1,0 +1,38 @@
+{
+	"name": "toolbelt",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@12.14.0",
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"dev": "pnpm --filter @toolbelt/app-toolbelt dev",
+		"dev:cairn": "pnpm --filter @toolbelt/app-cairn dev",
+		"build": "pnpm -r --filter './apps/*' build",
+		"build:firefox": "pnpm -r --filter './apps/*' build:firefox",
+		"zip": "pnpm -r --filter './apps/*' zip",
+		"typecheck": "pnpm -r typecheck",
+		"lint": "eslint . --max-warnings 0",
+		"test": "vitest run",
+		"format": "prettier --write .",
+		"check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+		"changeset": "changeset",
+		"e2e": "vitest run -c vitest.e2e.config.ts"
+	},
+	"devDependencies": {
+		"@changesets/cli": "3.0.3",
+		"@eslint/js": "10.0.1",
+		"eslint": "10.14.0",
+		"eslint-import-resolver-typescript": "4.4.5",
+		"eslint-plugin-boundaries": "7.4.0",
+		"eslint-plugin-react-hooks": "7.1.1",
+		"globals": "17.13.0",
+		"prettier": "3.9.10",
+		"typescript": "6.0.3",
+		"typescript-eslint": "8.72.1",
+		"vitest": "5.0.5",
+		"puppeteer-core": "25.16.0",
+		"@types/node": "24.19.2"
+	}
+}
