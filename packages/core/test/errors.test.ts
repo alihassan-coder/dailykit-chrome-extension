@@ -25,6 +25,10 @@ describe('toAppError', () => {
 		expect(toAppError(apiError(529)).code).toBe('provider_unavailable');
 	});
 
+	it('distinguishes permission refusals from invalid credentials', () => {
+		expect(toAppError(apiError(403), { setupToken: true }).code).toBe('permission_denied');
+	});
+
 	it('looks inside retry wrappers', () => {
 		const retry = Object.assign(new Error('Failed after 3 attempts'), {
 			name: 'AI_RetryError',
@@ -51,8 +55,12 @@ describe('toAppError', () => {
 		expect(toAppError(new Error('weird internal thing')).message).not.toContain('weird');
 	});
 
-	it('uses setup-token wording for Claude subscription tokens', () => {
-		expect(toAppError(apiError(401), { setupToken: true }).message).toContain('setup-token');
+	it('explains that Claude subscription tokens need an API key instead', () => {
+		expect(toAppError(apiError(401), { setupToken: true }).message).toContain('Anthropic API key');
+		expect(appError('subscription_token')).toMatchObject({
+			title: 'Use an Anthropic API key',
+			action: { kind: 'open-ai-settings' }
+		});
 	});
 
 	it('passes AppErrors and AppFailures through', () => {

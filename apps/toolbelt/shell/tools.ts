@@ -34,7 +34,7 @@ export const icons: Record<string, ComponentType<{ size?: number }>> = {
 
 /** Words people may type in the command palette to find a tool. */
 export const keywords: Record<string, string[]> = {
-	agent: ['ai', 'assistant', 'claude', 'gpt', 'grok', 'gemini', 'automate', 'ask'],
+	agent: ['ai', 'assistant', 'claude', 'gpt', 'grok', 'gemini', 'groq', 'automate', 'ask'],
 	cairn: ['chat history', 'claude', 'chatgpt', 'save'],
 	'color-picker': ['eyedropper', 'hex', 'rgb', 'contrast'],
 	grayscale: ['grayscale', 'greyscale', 'monochrome', 'focus'],

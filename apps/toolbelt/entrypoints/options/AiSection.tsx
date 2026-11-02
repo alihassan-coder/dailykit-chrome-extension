@@ -1,11 +1,12 @@
-// Shared AI credentials: provider API keys or a Claude subscription setup token.
-// Credentials use the existing local storage and optional encrypted account sync.
+// Shared AI credentials: the user's own provider API keys.
+// Credentials use the existing local storage and optional encrypted account sync. Claude subscription tokens
+// (claude setup-token) are refused: Anthropic only accepts them in its own apps.
 import { testClaudeConnection } from '@toolbelt/ai';
 import {
 	PROVIDERS,
 	appError,
+	describeError,
 	isClaudeSetupToken,
-	looksLikeClaudeSetupToken,
 	looksLikeKey,
 	maskKey,
 	timeAgo,
@@ -32,7 +33,6 @@ import {
 	ErrorNotice,
 	IconButton,
 	Label,
-	Select,
 	Skeleton,
 	showError,
 	toast
@@ -42,9 +42,6 @@ import { useReducer, useState, type FormEvent } from 'react';
 import { SecretInput, SettingsGroup, SettingsHeader, keysStore, useApiKeys } from './shared.tsx';
 
 type Provider = (typeof PROVIDERS)[number];
-/** How Anthropic is connected: an API key, or a Claude subscription setup token. Other providers: always 'api'. */
-type Method = 'api' | 'subscription';
-
 type Test =
 	{ kind: 'idle' } | { kind: 'testing' } | { kind: 'ok'; at: number } | { kind: 'failed'; at: number; error: AppError };
 
@@ -67,13 +64,13 @@ function rowReducer(state: RowState, action: RowAction): RowState {
 	}
 }
 
-const methodOf = (id: ProviderId, saved?: string): Method =>
-	id === 'anthropic' && saved && isClaudeSetupToken(saved) ? 'subscription' : 'api';
-const credentialName = (m: Method) => (m === 'subscription' ? 'token' : 'key');
+/** A Claude subscription token saved by an older version: shown as unsupported until it's replaced. */
+const isSubscriptionToken = (id: ProviderId, value?: string) =>
+	id === 'anthropic' && !!value && isClaudeSetupToken(value);
 
 /** testClaudeConnection throws plain, already-safe sentences; map the known ones to the shared wording. */
 function testFailure(error: unknown, ctx: ErrorContext): AppError {
-	const e = toAppError(error, ctx);
+	const e = describeError(error, ctx);
 	if (e.code !== 'unknown') return e;
 	const msg = error instanceof Error ? error.message : '';
 	if (/rejected/i.test(msg)) return appError('auth_invalid', ctx);
@@ -94,20 +91,16 @@ function KeyDialog({
 	onOpenChange: (open: boolean) => void;
 	onSaved: () => void;
 }) {
-	const [method, setMethod] = useState<Method>(methodOf(provider.id, saved));
 	const [draft, setDraft] = useState('');
 	const [error, setError] = useState<AppError | null>(null);
 	const [busy, setBusy] = useState(false);
-	const subscription = provider.id === 'anthropic' && method === 'subscription';
-	const label = subscription ? 'setup token' : 'API key';
 	const value = draft.trim();
-	const valid = subscription ? looksLikeClaudeSetupToken(draft) : !!value;
-	const warning = !value
-		? null
-		: subscription
-			? valid
-				? null
-				: 'Paste the complete setup token starting with sk-ant-oat01- (at least 80 characters, without spaces).'
+	// A pasted subscription token is refused here, with the fix, instead of failing later in every tool.
+	const subscriptionToken = isSubscriptionToken(provider.id, value);
+	const valid = !!value && !subscriptionToken;
+	const warning =
+		!value || subscriptionToken
+			? null
 			: looksLikeKey(provider.id, draft)
 				? null
 				: `${provider.name} keys usually start with “${provider.keyHint}”. Check you copied the whole key.`;
@@ -119,7 +112,7 @@ function KeyDialog({
 		setError(null);
 		try {
 			await keysStore.update((k) => ({ ...k, [provider.id]: value }));
-			toast.success(`${provider.name} ${label} saved`);
+			toast.success(`${provider.name} API key saved`);
 			setDraft('');
 			onSaved();
 		} catch (err) {
@@ -135,7 +128,7 @@ function KeyDialog({
 				<form onSubmit={save} className="grid gap-3">
 					<DialogHeader>
 						<DialogTitle>
-							{saved ? 'Replace' : 'Add'} {provider.name} {credentialName(method)}
+							{saved ? 'Replace' : 'Add'} {provider.name} API key
 						</DialogTitle>
 						<DialogDescription>
 							Stored in this browser and sent only to {provider.name}.{' '}
@@ -150,50 +143,22 @@ function KeyDialog({
 						</DialogDescription>
 					</DialogHeader>
 
-					{provider.id === 'anthropic' && (
-						<div className="grid gap-1.5">
-							<Label>Connection method</Label>
-							<Select<Method>
-								label="Anthropic connection method"
-								value={method}
-								onChange={(m) => {
-									setMethod(m);
-									setDraft('');
-									setError(null);
-								}}
-								options={[
-									{ value: 'api', label: 'API key', description: 'Billed to your Anthropic Console account' },
-									{
-										value: 'subscription',
-										label: 'Claude subscription (setup token)',
-										description: 'Uses your Claude plan’s usage limits'
-									}
-								]}
-							/>
-							{subscription && (
-								<p className="text-sm text-muted">
-									Run <code className="font-mono">claude setup-token</code> with Claude Code installed, sign in with
-									your Claude subscription, then paste the full <code className="font-mono">sk-ant-oat01-…</code> token.
-									If it expires or is revoked, generate a new one and replace it here.
-								</p>
-							)}
-						</div>
-					)}
-
 					<div className="grid gap-1.5">
-						<Label htmlFor={`key-${provider.id}`}>{subscription ? 'Setup token' : 'API key'}</Label>
+						<Label htmlFor={`key-${provider.id}`}>API key</Label>
 						<SecretInput
 							id={`key-${provider.id}`}
 							value={draft}
 							onChange={(e) => setDraft(e.target.value)}
-							placeholder={`${subscription ? 'sk-ant-oat01-' : provider.keyHint}…`}
-							aria-label={`${provider.name} ${label}`}
-							aria-invalid={(subscription && !!warning) || undefined}
+							placeholder={`${provider.keyHint}…`}
+							aria-label={`${provider.name} API key`}
+							aria-invalid={subscriptionToken || undefined}
 							className="font-mono text-sm"
 							autoFocus
 						/>
 						{warning && <p className="text-sm text-warn">{warning}</p>}
 					</div>
+
+					{subscriptionToken && <ErrorNotice error={appError('subscription_token', { provider: provider.name })} />}
 
 					{error && <ErrorNotice error={error} onDismiss={() => setError(null)} />}
 
@@ -202,7 +167,7 @@ function KeyDialog({
 							Cancel
 						</Button>
 						<Button type="submit" variant="primary" disabled={!valid} loading={busy}>
-							Save {subscription ? 'token' : 'key'}
+							Save key
 						</Button>
 					</DialogFooter>
 				</form>
@@ -211,8 +176,9 @@ function KeyDialog({
 	);
 }
 
-function StatusBadge({ saved, test }: { saved?: string; test: Test }) {
+function StatusBadge({ saved, unsupported, test }: { saved?: string; unsupported: boolean; test: Test }) {
 	if (!saved) return <Badge tone="neutral">Not set</Badge>;
+	if (unsupported) return <Badge tone="danger">Unsupported</Badge>;
 	if (test.kind === 'ok') return <Badge tone="ok">Connected</Badge>;
 	if (test.kind === 'failed' && test.error.code === 'auth_invalid') return <Badge tone="danger">Invalid</Badge>;
 	if (test.kind === 'failed') return <Badge tone="warn">Test failed</Badge>;
@@ -221,10 +187,10 @@ function StatusBadge({ saved, test }: { saved?: string; test: Test }) {
 
 function ProviderRow({ provider, saved }: { provider: Provider; saved?: string }) {
 	const [state, dispatch] = useReducer(rowReducer, { dialog: 'none', test: { kind: 'idle' } });
-	const method = methodOf(provider.id, saved);
-	const noun = credentialName(method);
-	const canTest = provider.id === 'anthropic' && !!saved;
-	const ctx: ErrorContext = { provider: provider.name, setupToken: method === 'subscription' };
+	const unsupported = isSubscriptionToken(provider.id, saved);
+	const noun = 'key';
+	const canTest = provider.id === 'anthropic' && !!saved && !unsupported;
+	const ctx: ErrorContext = { provider: provider.name };
 	const testing = state.test.kind === 'testing';
 
 	async function test() {
@@ -263,11 +229,10 @@ function ProviderRow({ provider, saved }: { provider: Provider; saved?: string }
 					<p className="truncate text-base font-medium">
 						{provider.name} <span className="font-normal text-faint">{provider.product}</span>
 					</p>
-					<StatusBadge saved={saved} test={state.test} />
+					<StatusBadge saved={saved} unsupported={unsupported} test={state.test} />
 				</div>
 				{saved && (
 					<span className="flex min-w-0 items-center gap-3 text-sm text-faint max-sm:hidden">
-						{method === 'subscription' && <span>Subscription</span>}
 						<code className="truncate font-mono text-sm text-muted">{maskKey(saved)}</code>
 						{canTest && (
 							<span className="tb-num whitespace-nowrap">{tested ? `Tested ${timeAgo(tested)}` : 'Not tested'}</span>
@@ -314,6 +279,15 @@ function ProviderRow({ provider, saved }: { provider: Provider; saved?: string }
 				)}
 			</div>
 
+			{unsupported && (
+				<div className="px-3 pb-2.5">
+					<ErrorNotice
+						error={appError('subscription_token', { provider: provider.name })}
+						onAction={() => dispatch({ type: 'dialog', dialog: 'edit' })}
+					/>
+				</div>
+			)}
+
 			{state.test.kind === 'failed' && (
 				<div className="px-3 pb-2.5">
 					<ErrorNotice
@@ -358,8 +332,8 @@ export function AiSection() {
 			<SettingsHeader
 				id="ai-title"
 				title="AI providers"
-				description="Your Claude subscription or your own API keys, used by tools like the browser agent."
-				meta={keys ? `${count} of ${PROVIDERS.length} connected` : undefined}
+				description="Your own API keys, used by tools like the browser agent."
+				meta={keys ? `${count} of ${PROVIDERS.length} saved` : undefined}
 			/>
 			<SettingsGroup title="Providers">
 				{keys ? (

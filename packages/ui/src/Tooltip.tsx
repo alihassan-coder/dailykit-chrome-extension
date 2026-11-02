@@ -1,6 +1,6 @@
 // A styled tooltip on Radix: 400 ms before the first one, instant while moving between items, shown on keyboard
 // focus, Escape dismisses, hoverable (WCAG 1.4.13), collision-aware. It portals into our root, so scroll areas
-// (the side rail) never clip it.
+// (the dock, menus) never clip it.
 import type { ReactElement } from 'react';
 import { TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from './shadcn/overlays.tsx';
 

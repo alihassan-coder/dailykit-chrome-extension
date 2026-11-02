@@ -6,6 +6,8 @@
 export type AppErrorCode =
 	| 'offline'
 	| 'auth_invalid'
+	| 'subscription_token'
+	| 'permission_denied'
 	| 'rate_limited'
 	| 'quota_exhausted'
 	| 'model_not_found'
@@ -43,7 +45,7 @@ export interface ErrorContext {
 	/** "Anthropic", "OpenAI"... used in the wording. */
 	provider?: string;
 	model?: string;
-	/** True when the Anthropic credential is a Claude setup token (different fix for auth errors). */
+	/** True when the Anthropic credential is a Claude subscription token, which Toolbelt does not accept. */
 	setupToken?: boolean;
 }
 
@@ -70,12 +72,31 @@ export function appError(code: AppErrorCode, ctx: ErrorContext = {}, extra: Part
 					retryable: true,
 					action: ACTIONS.retry
 				};
+			case 'subscription_token':
+				return {
+					title: 'Use an Anthropic API key',
+					message:
+						'Claude subscription tokens only work in Anthropic’s own apps (Claude, Claude Code). Add an Anthropic API key from console.anthropic.com instead.',
+					severity: 'error',
+					retryable: false,
+					action: ACTIONS.settings
+				};
 			case 'auth_invalid':
 				return {
 					title: `${who} rejected the key`,
 					message: ctx.setupToken
-						? 'The Claude setup token was refused. Run “claude setup-token” again and replace it, or use an API key.'
+						? 'Claude subscription tokens only work in Anthropic’s own apps (Claude, Claude Code). Add an Anthropic API key from console.anthropic.com instead.'
 						: 'Check the key and its permissions in AI settings, or paste a new one.',
+					severity: 'error',
+					retryable: false,
+					action: ACTIONS.settings
+				};
+			case 'permission_denied':
+				return {
+					title: `${who} denied access`,
+					message: ctx.setupToken
+						? 'Claude subscription tokens only work in Anthropic’s own apps (Claude, Claude Code). Add an Anthropic API key from console.anthropic.com instead.'
+						: 'This request is not permitted. Check your account, key permissions, and model access in the provider console.',
 					severity: 'error',
 					retryable: false,
 					action: ACTIONS.settings
@@ -132,7 +153,7 @@ export function appError(code: AppErrorCode, ctx: ErrorContext = {}, extra: Part
 			case 'no_provider':
 				return {
 					title: 'Connect an AI provider',
-					message: 'Add an API key for Anthropic, OpenAI, Gemini or xAI to start.',
+					message: 'Add an API key for Anthropic, OpenAI, Groq, Gemini or xAI to start.',
 					severity: 'info',
 					retryable: false,
 					action: ACTIONS.settings
@@ -273,7 +294,8 @@ export function toAppError(error: unknown, ctx: ErrorContext = {}): AppError {
 	if (typeof navigator !== 'undefined' && navigator.onLine === false) return appError('offline', ctx);
 
 	if (typeof status === 'number') {
-		if (status === 401 || status === 403) return appError('auth_invalid', ctx);
+		if (status === 401) return appError('auth_invalid', ctx);
+		if (status === 403) return appError('permission_denied', ctx);
 		if (status === 404) return appError('model_not_found', ctx);
 		if (status === 402) return appError('quota_exhausted', ctx);
 		if (status === 429) {

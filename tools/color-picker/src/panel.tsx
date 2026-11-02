@@ -16,7 +16,10 @@ import {
 } from '@toolbelt/ui';
 import { Check, Copy, Pipette, Trash2 } from 'lucide-react';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { ContrastCheck } from './ContrastCheck.tsx';
+import { PagePalette } from './PagePalette.tsx';
 import { addToHistory, contrastRatio, formats, normalizeHex, wcagLevel, type Hex } from './colors.ts';
+import { PICK_TTL_MS, pickRequest } from './handoff.ts';
 
 // EyeDropper is Chromium-only and not in TypeScript's DOM types yet.
 declare global {
@@ -128,6 +131,9 @@ export default function ColorPickerPanel() {
 	const keepHistory = featureOn(settings, 'color-picker', 'history');
 	const [color, setColor] = useState<Hex>('#2e55e6');
 	const [saved, setSaved] = useState<Hex[]>([]);
+	/** The contrast check's text colour; null means black or white, whichever reads better. */
+	const [textColor, setTextColor] = useState<Hex | null>(null);
+	const [pageColors, setPageColors] = useState<Hex[]>([]);
 	const input = useRef<HTMLInputElement>(null);
 	const canPick = typeof window.EyeDropper === 'function';
 
@@ -158,6 +164,31 @@ export default function ColorPickerPanel() {
 			showError(err);
 		}
 	}
+	// "Pick a colour" from the side panel's search (it opened this tool and left a request).
+	const onPickRequest = useEffectEvent((at: number | null) => {
+		if (at === null || Date.now() - at > PICK_TTL_MS) return;
+		pickRequest.set(null).catch(saveFailed);
+		if (!window.EyeDropper) {
+			showError(
+				appError(
+					'unknown',
+					{},
+					{
+						title: 'No screen eyedropper',
+						message: 'This browser can’t pick colours from the screen. Click the swatch to adjust the colour instead.',
+						severity: 'warn'
+					}
+				)
+			);
+			return;
+		}
+		void pick();
+	});
+	useEffect(() => {
+		pickRequest.get().then((at) => onPickRequest(at), saveFailed);
+		return pickRequest.subscribe((at) => onPickRequest(at));
+	}, []);
+
 	// E picks from screen, unless you're typing somewhere.
 	const onKey = useEffectEvent((e: KeyboardEvent) => {
 		if (e.key.toLowerCase() !== PICK_KEY || e.metaKey || e.ctrlKey || e.altKey || e.repeat || typing(e.target)) return;
@@ -249,6 +280,19 @@ export default function ColorPickerPanel() {
 					<CopyRow key={row.key} label={row.label} value={f[row.key]} />
 				))}
 			</Card>
+
+			<ContrastCheck
+				background={color}
+				text={textColor}
+				choices={[...saved, ...pageColors]}
+				onText={setTextColor}
+				onSwap={(fg) => {
+					setTextColor(color);
+					setColor(fg);
+				}}
+			/>
+
+			<PagePalette current={color} onUse={choose} onLoaded={setPageColors} />
 
 			{keepHistory && (
 				<Section

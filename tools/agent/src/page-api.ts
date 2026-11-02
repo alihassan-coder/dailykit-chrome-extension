@@ -70,7 +70,10 @@ const sleep = (ms: number, signal?: AbortSignal) =>
 		signal?.addEventListener('abort', () => (clearTimeout(t), resolve()), { once: true });
 	});
 
-export function pageApi(tabId: number, windowId: number, opts: { screenshots: boolean }): PageApi {
+/** The loop's page connection, plus what only the panel asks for (the user's selection). */
+export type PanelPageApi = PageApi & { selection(): Promise<string> };
+
+export function pageApi(tabId: number, windowId: number, opts: { screenshots: boolean }): PanelPageApi {
 	async function ping(): Promise<boolean> {
 		try {
 			const pong = await Promise.race([
@@ -144,6 +147,7 @@ export function pageApi(tabId: number, windowId: number, opts: { screenshots: bo
 		read: (o) => send<string>({ type: 'agent:read', ...o }),
 		find: (query) => send<string>({ type: 'agent:find', query }),
 		text: () => send<string>({ type: 'agent:text' }),
+		selection: () => send<string>({ type: 'agent:selection' }),
 		target: (ref) => send<Target | null>({ type: 'agent:target', ref }),
 		focused: () => send<Target | null>({ type: 'agent:focused' }),
 		act: async (action) => {

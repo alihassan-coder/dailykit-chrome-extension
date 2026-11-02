@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><defs>
+<linearGradient id="lpp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#383D4B"/><stop offset="0.5" stop-color="#1F222B"/><stop offset="1" stop-color="#0D0F13"/></linearGradient>
+<linearGradient id="lpsheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<linearGradient id="lprim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".25" stop-color="#fff" stop-opacity=".08"/><stop offset=".8" stop-color="#000" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient>
+<clipPath id="lpclip"><rect x="16" y="16" width="96" height="96" rx="22"/></clipPath>
+<filter id="lpdrop" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".28"/></filter>
+<linearGradient id="lpS1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8CA4FF"/><stop offset=".4" stop-color="#5374FF"/><stop offset="1" stop-color="#2E48D0"/></linearGradient>
+<linearGradient id="lpS2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2A43C8"/><stop offset=".35" stop-color="#4C6DFA"/><stop offset=".6" stop-color="#5A7AFF"/><stop offset="1" stop-color="#2840BE"/></linearGradient>
+<linearGradient id="lpFold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000830" stop-opacity=".8"/><stop offset="1" stop-color="#000830" stop-opacity="0"/></linearGradient>
+<linearGradient id="lpBrass" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FFF1BF"/><stop offset=".35" stop-color="#FFD25E"/><stop offset=".55" stop-color="#E9A50F"/>
+<stop offset=".7" stop-color="#FFC53D"/><stop offset="1" stop-color="#B97A00"/></linearGradient>
+<filter id="lpGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="7"/></filter>
+<filter id="lpSh" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="2.5" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/></filter>
+<radialGradient id="lpHole" cx=".5" cy=".4"><stop offset=".55" stop-color="#040719"/><stop offset="1" stop-color="#1A2A80"/></radialGradient>
+</defs>
+<rect x="16" y="16" width="96" height="96" rx="22" fill="url(#lpp)" filter="url(#lpdrop)"/>
+<g clip-path="url(#lpclip)">
+  <path d="M0 36h128v26H0ZM50 54h28v42l-14 14-14-14Z" fill="#3D63FF" opacity=".6" filter="url(#lpGlow)"/>
+  <g filter="url(#lpSh)"><path d="M50 54h28v42l-14 14-14-14Z" fill="url(#lpS2)"/></g>
+  <rect x="50" y="62" width="28" height="10" fill="url(#lpFold)"/>
+  <path d="M54.5 66v28.4L64 103.8l9.5-9.4V66" fill="none" stroke="#DDE5FF" stroke-opacity=".75" stroke-width="1.4" stroke-dasharray="3.5 2.5" stroke-linecap="round"/>
+  <circle cx="64" cy="78" r="3.6" fill="url(#lpHole)"/><circle cx="64" cy="90" r="3.6" fill="url(#lpHole)"/>
+  <g filter="url(#lpSh)"><path d="M0 36h128v26H0Z" fill="url(#lpS1)"/></g>
+  <path d="M0 40.5h128M0 57.5h128" stroke="#fff" stroke-opacity=".7" stroke-width="1.4" stroke-dasharray="3.5 2.5"/>
+  <path d="M0 36.6h128" stroke="#fff" stroke-opacity=".6" stroke-width="1.2"/>
+</g>
+<circle cx="64" cy="49" r="6" fill="url(#lpBrass)" stroke="#7A5200" stroke-width=".8"/><circle cx="62.4" cy="47.2" r="1.7" fill="#FFF7D6"/>
+<rect x="16" y="16" width="96" height="96" rx="22" fill="url(#lpsheen)"/>
+<rect x="16.75" y="16.75" width="94.5" height="94.5" rx="21.25" fill="none" stroke="url(#lprim)" stroke-width="1.5"/></svg>

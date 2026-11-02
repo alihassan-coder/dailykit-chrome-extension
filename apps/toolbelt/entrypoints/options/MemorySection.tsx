@@ -128,7 +128,7 @@ function Off({ status }: { status: MemoryStatus }) {
 			<EmptyState
 				icon={<KeyRound />}
 				title="Add an OpenAI or Gemini key to turn memory on"
-				body="Memory uses embeddings to find notes later. Anthropic and xAI have no embedding service, so memory needs an OpenAI or Gemini key, even when the agent uses Claude or Grok."
+				body="Memory uses embeddings to find notes later. Anthropic, xAI and Groq have no embedding service, so memory needs an OpenAI or Gemini key, even when the agent uses Claude, Grok or Groq."
 				action={
 					<Button
 						variant="primary"

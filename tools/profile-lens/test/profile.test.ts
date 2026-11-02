@@ -180,7 +180,7 @@ describe('capturePage (runs in the LinkedIn tab)', () => {
 		expect((await run('<main><h2>This page doesn’t exist</h2></main>')).missing).toBe(true);
 	});
 
-	it('waits for the single-page app to reach the profile, then gives up after 5 s', async () => {
+	it('waits briefly for the single-page app to reach the profile (the reader already waited), then gives up', async () => {
 		vi.useFakeTimers();
 		window.scrollTo = () => {};
 		document.body.innerHTML = '<main><h1>Previous Person</h1></main>';
@@ -189,7 +189,7 @@ describe('capturePage (runs in the LinkedIn tab)', () => {
 			settled = true;
 			return p;
 		});
-		await vi.advanceTimersByTimeAsync(4_000);
+		await vi.advanceTimersByTimeAsync(2_000);
 		expect(settled).toBe(false);
 		await vi.runAllTimersAsync();
 		// The reader compares this URL with the slug and refuses the stale capture.

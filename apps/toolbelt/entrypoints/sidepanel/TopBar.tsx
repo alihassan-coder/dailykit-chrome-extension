@@ -1,4 +1,5 @@
-// The one 40 px bar above the tool: which tool you are in, search, and a "⋯" menu for the rest.
+// The one 40 px bar above the tool: which tool you are in, search, and a "⋯" menu for the rest (switch tool,
+// dashboard, appearance, shortcuts, lock).
 import {
 	Dialog,
 	DialogContent,
@@ -8,28 +9,41 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
+	DropdownMenuShortcut,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 	IconButton,
 	Kbd,
 	KbdGroup,
 	Logo
 } from '@toolbelt/ui';
-import { Keyboard, Lock, MoreHorizontal, Palette, Settings2 } from 'lucide-react';
+import { ArrowLeftRight, Keyboard, Lock, MoreHorizontal, Palette, Settings2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { SearchAnchor, SearchTrigger } from '../../shell/HeaderSearch.tsx';
-import { openDashboard } from '../../shell/commands.ts';
+import { openDashboard, toolShortcut } from '../../shell/commands.ts';
 import { ToolIcon } from './ToolIcon.tsx';
+
+const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform);
 
 const ICON = { className: 'size-4', strokeWidth: 1.75, 'aria-hidden': true } as const;
 
 export function TopBar({
 	tool,
+	tools,
 	wide,
+	onChoose,
 	onLock
 }: {
 	tool: { id: string; name: string } | undefined;
+	/** The tools that are on, in dock order, for "Switch tool". */
+	tools: { id: string; name: string }[];
 	wide: boolean;
+	onChoose: (id: string) => void;
 	onLock: () => void;
 }) {
 	const [shortcuts, setShortcuts] = useState(false);
@@ -53,6 +67,30 @@ export function TopBar({
 					</IconButton>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
+					{tools.length > 1 && (
+						<>
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger>
+									<ArrowLeftRight {...ICON} />
+									Switch tool
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent>
+									<DropdownMenuRadioGroup value={tool?.id} onValueChange={onChoose}>
+										{tools.map((t, i) => (
+											<DropdownMenuRadioItem key={t.id} value={t.id}>
+												<ToolIcon id={t.id} size={16} />
+												{t.name}
+												{toolShortcut(i) && (
+													<DropdownMenuShortcut className="pr-1">{toolShortcut(i)}</DropdownMenuShortcut>
+												)}
+											</DropdownMenuRadioItem>
+										))}
+									</DropdownMenuRadioGroup>
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
+							<DropdownMenuSeparator />
+						</>
+					)}
 					<DropdownMenuItem onSelect={() => openDashboard()}>
 						<Settings2 {...ICON} />
 						Open dashboard
@@ -81,8 +119,8 @@ export function TopBar({
 
 const SHORTCUTS: { label: string; keys: string[] }[] = [
 	{ label: 'Search tools, actions and settings', keys: ['Mod', 'K'] },
-	{ label: 'Open or collapse the toolbar', keys: ['['] },
-	{ label: 'Move between tools in the toolbar', keys: ['↑', '↓'] },
+	{ label: 'Open the first to ninth tool', keys: [isMac ? '⌥' : 'Alt', '1–9'] },
+	{ label: 'Move between tools in the dock', keys: ['←', '→'] },
 	{ label: 'Open the focused tool', keys: ['Enter'] },
 	{ label: 'Close search, menus and dialogs', keys: ['Esc'] }
 ];

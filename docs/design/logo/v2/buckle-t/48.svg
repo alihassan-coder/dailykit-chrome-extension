@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="14 14 100 100"><defs>
+<linearGradient id="btp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7290FF"/><stop offset="0.45" stop-color="#4467F5"/><stop offset="1" stop-color="#1F33B0"/></linearGradient>
+<linearGradient id="btsheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<linearGradient id="btrim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".25" stop-color="#fff" stop-opacity=".08"/><stop offset=".8" stop-color="#000" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient>
+<clipPath id="btclip"><rect x="16" y="16" width="96" height="96" rx="22"/></clipPath>
+<filter id="btdrop" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".28"/></filter>
+<linearGradient id="btStrap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0D1540"/><stop offset=".12" stop-color="#1B2970"/><stop offset=".5" stop-color="#26388C"/><stop offset=".88" stop-color="#1A2768"/><stop offset="1" stop-color="#0C143B"/></linearGradient>
+<linearGradient id="btShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#030722" stop-opacity=".85"/><stop offset="1" stop-color="#030722" stop-opacity="0"/></linearGradient>
+<linearGradient id="btChrome" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FFFFFF"/><stop offset=".38" stop-color="#E4E9F4"/><stop offset=".5" stop-color="#A9B4CC"/>
+<stop offset=".62" stop-color="#DCE2EE"/><stop offset="1" stop-color="#8E9AB6"/></linearGradient><linearGradient id="btProng" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#FFFFFF"/><stop offset=".38" stop-color="#E4E9F4"/><stop offset=".5" stop-color="#A9B4CC"/>
+<stop offset=".62" stop-color="#DCE2EE"/><stop offset="1" stop-color="#8E9AB6"/></linearGradient>
+<filter id="btS" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#050A2A" flood-opacity="0.5"/></filter><filter id="btS2" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="2" stdDeviation="1.2" flood-color="#050A2A" flood-opacity="0.55"/></filter>
+<radialGradient id="btHole" cx=".5" cy=".4"><stop offset=".6" stop-color="#03061C"/><stop offset="1" stop-color="#16226A"/></radialGradient>
+<radialGradient id="btGlow" cx="64" cy="40" r="52" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#B8C8FF" stop-opacity=".55"/><stop offset="1" stop-color="#B8C8FF" stop-opacity="0"/></radialGradient>
+<filter id="btGrain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -.55"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+<linearGradient id="btTip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#03061C" stop-opacity="0"/><stop offset="1" stop-color="#03061C" stop-opacity=".9"/></linearGradient>
+<radialGradient id="btAmb" cx="64" cy="81" r="12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFC53D" stop-opacity=".9"/><stop offset="1" stop-color="#FFC53D" stop-opacity="0"/></radialGradient>
+</defs>
+<rect x="16" y="16" width="96" height="96" rx="22" fill="url(#btp)" filter="url(#btdrop)"/>
+<g clip-path="url(#btclip)">
+    <g filter="url(#btS)"><rect x="49" y="30" width="30" height="96" fill="url(#btStrap)"/></g>
+  <path d="M49.6 30v84M78.4 30v84" stroke="#5470E0" stroke-opacity=".55" stroke-width="1.2"/>
+  <path d="M53.6 66v46M74.4 66v46" stroke="#FFC53D" stroke-width="1.7" stroke-dasharray="4.2 2.8" stroke-linecap="round"/>
+  <rect x="49" y="34" width="30" height="12" fill="url(#btShade)"/>
+  <rect x="49" y="30" width="30" height="96" filter="url(#btGrain)" opacity=".11"/>
+  <circle cx="64" cy="81" r="10" fill="url(#btAmb)" opacity=".5"/>
+  <ellipse cx="64" cy="81" rx="5.6" ry="5" fill="url(#btHole)"/>
+  <path d="M58.6 82.6a5.6 5 0 0 0 10.8 0" fill="none" stroke="#FFC53D" stroke-width="1.1"/>
+  <ellipse cx="64" cy="98" rx="4.2" ry="3.8" fill="url(#btHole)"/><path d="M60 99.3a4.2 3.8 0 0 0 8 0" fill="none" stroke="#5D78F0" stroke-width=".8"/>
+  <ellipse cx="64" cy="113" rx="4.2" ry="3.8" fill="url(#btHole)"/>
+</g>
+<g filter="url(#btS)">
+  <path fill-rule="evenodd" fill="url(#btChrome)" d="M33 24h62a9 9 0 0 1 9 9v18a9 9 0 0 1-9 9H33a9 9 0 0 1-9-9V33a9 9 0 0 1 9-9ZM37 34a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h54a3 3 0 0 0 3-3V37a3 3 0 0 0-3-3Z"/>
+</g>
+<path fill="none" stroke="#fff" stroke-width="1.2" d="M26.4 27.5a9 9 0 0 1 6.6-2.9h62a9 9 0 0 1 6.6 2.9"/>
+<path fill="none" stroke="#56628A" stroke-opacity=".8" stroke-width="1" d="M34.5 47a2.5 2.5 0 0 0 2.5 2.5h54a2.5 2.5 0 0 0 2.5-2.5"/>
+<path fill="none" stroke="#3C4668" stroke-opacity=".6" stroke-width="1" d="M24.6 51a8.4 8.4 0 0 0 8.4 8.4h62a8.4 8.4 0 0 0 8.4-8.4"/>
+<ellipse cx="44" cy="27.4" rx="13" ry="1.4" fill="#fff"/>
+<!-- prong: hinge cap wraps the top bar, the prong runs over the bottom bar and into the first hole -->
+<g filter="url(#btS2)">
+  <rect x="60" y="28" width="8" height="55" rx="4" fill="url(#btProng)"/><rect x="60" y="75" width="8" height="8" fill="url(#btTip)"/>
+  <rect x="57.5" y="22.5" width="13" height="13" rx="4.5" fill="url(#btChrome)"/>
+</g>
+<path d="M62.2 38v36" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>
+<path d="M59 25.5h10" stroke="#fff" stroke-width="1" stroke-linecap="round"/>
+<rect x="16" y="16" width="96" height="96" rx="22" fill="url(#btsheen)"/>
+<rect x="16.75" y="16.75" width="94.5" height="94.5" rx="21.25" fill="none" stroke="url(#btrim)" stroke-width="1.5"/></svg>

@@ -2,16 +2,18 @@
 // each offers is fetched live (models.ts), not hard-coded here.
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGroq } from '@ai-sdk/groq';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createXai } from '@ai-sdk/xai';
 import {
-	CLAUDE_CODE_SYSTEM,
+	AppFailure,
 	anthropicHeaders,
+	appError,
 	isClaudeSetupToken,
 	type ApiKeys,
 	type ProviderId
 } from '@toolbelt/core';
-import { wrapLanguageModel, type LanguageModel } from 'ai';
+import type { LanguageModel } from 'ai';
 import type { ModelInfo } from './models.ts';
 
 export interface ModelChoice {
@@ -23,7 +25,8 @@ const PROVIDER_NAMES: Record<ProviderId, string> = {
 	anthropic: 'Anthropic',
 	openai: 'OpenAI',
 	xai: 'xAI',
-	gemini: 'Google'
+	gemini: 'Google',
+	groq: 'Groq'
 };
 
 /** "Anthropic", "Google": how a provider is named on screen and in error messages. */
@@ -39,43 +42,19 @@ export function createModel(choice: ModelChoice, keys: ApiKeys): LanguageModel {
 	const apiKey = keys[choice.provider];
 	if (!apiKey) throw new Error(`Add a ${choice.provider} API key in Toolbelt settings first.`);
 	switch (choice.provider) {
-		case 'anthropic': {
-			const subscription = isClaudeSetupToken(apiKey);
-			const headers = anthropicHeaders(apiKey);
-			const model = createAnthropic({
-				...(subscription ? { authToken: apiKey } : { apiKey }),
-				headers,
-				// AI SDK supplies its own per-call User-Agent, overriding provider headers. Apply the
-				// subscription protocol version at the final transport boundary; keep SDK beta headers.
-				...(subscription
-					? {
-							fetch: (input: RequestInfo | URL, init?: RequestInit) => {
-								const finalHeaders = new Headers(init?.headers);
-								finalHeaders.set('user-agent', headers['user-agent']!);
-								return fetch(input, { ...init, headers: finalHeaders });
-							}
-						}
-					: {})
-			})(choice.model);
-			if (!subscription) return model;
-			// The subscription protocol requires this first system block. Preserve the tool's instructions
-			// and all messages/tool calls after it, for both streaming and non-streaming requests.
-			return wrapLanguageModel({
-				model,
-				middleware: {
-					specificationVersion: 'v4',
-					transformParams: async ({ params }) => ({
-						...params,
-						prompt: [{ role: 'system', content: CLAUDE_CODE_SYSTEM }, ...params.prompt]
-					})
-				}
-			});
-		}
+		case 'anthropic':
+			// A Claude subscription token only works in Anthropic's own apps; never send it, say what to do instead.
+			if (isClaudeSetupToken(apiKey))
+				throw new AppFailure(appError('subscription_token', { provider: 'Anthropic', setupToken: true }));
+			return createAnthropic({ apiKey, headers: anthropicHeaders() })(choice.model);
 		case 'openai':
 			return createOpenAI({ apiKey })(choice.model);
 		case 'xai':
 			return createXai({ apiKey })(choice.model);
 		case 'gemini':
 			return createGoogleGenerativeAI({ apiKey })(choice.model);
+		case 'groq':
+			// Groq allows browser CORS with a Bearer key; no extra header is needed.
+			return createGroq({ apiKey })(choice.model);
 	}
 }

@@ -7,6 +7,7 @@
 		".": "./src/index.ts",
 		"./panel": "./src/panel.tsx",
 		"./icon": "./src/icon.tsx",
+		"./handoff": "./src/handoff.ts",
 		"./entries/*": "./src/entries/*"
 	},
 	"scripts": {

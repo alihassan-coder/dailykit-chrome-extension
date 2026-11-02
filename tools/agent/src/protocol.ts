@@ -6,6 +6,8 @@ export type PageRequest =
 	| { type: 'agent:read'; all?: boolean; ref?: string }
 	| { type: 'agent:find'; query: string }
 	| { type: 'agent:text' }
+	/** The text the user has selected on the page ('' for none). */
+	| { type: 'agent:selection' }
 	| { type: 'agent:target'; ref: string }
 	| { type: 'agent:focused' }
 	| { type: 'agent:act'; action: PageAction }

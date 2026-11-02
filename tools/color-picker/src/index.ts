@@ -6,7 +6,8 @@ export const colorPicker = defineTool({
 	name: 'Colour picker',
 	description: 'Pick any colour on screen, copy it as HEX, RGB or HSL, and check text contrast',
 	hostMatches: [],
-	permissions: [],
+	// The page palette reads the active tab's colours with scripting.executeScript (on sites Toolbelt may read).
+	permissions: ['scripting'],
 	contentScripts: [],
 	features: [
 		{

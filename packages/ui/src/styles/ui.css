@@ -337,7 +337,7 @@ html[data-tb-root] body {
 	animation: tb-flash 700ms ease-out;
 }
 
-/* Scroll areas that should not show a bar (the side rail's tool list). */
+/* Scroll areas that should not show a bar (e.g. the dock's tool row). */
 .tb-no-scrollbar {
 	scrollbar-width: none;
 }

@@ -213,3 +213,31 @@ describe('after acting', () => {
 		);
 	});
 });
+
+describe('the selection', () => {
+	it('reads text selected in the page, trimmed', async () => {
+		const { selectedText } = await import('../src/perception.ts');
+		const p = document.querySelector('p')!;
+		const range = document.createRange();
+		range.selectNodeContents(p);
+		document.getSelection()!.removeAllRanges();
+		document.getSelection()!.addRange(range);
+		expect(selectedText(document)).toBe('Welcome back to the example site.');
+		expect(selectedText(document, 7)).toBe('Welcome');
+		document.getSelection()!.removeAllRanges();
+		expect(selectedText(document)).toBe('');
+	});
+
+	it('reads a selection inside a text box, never inside a password field', async () => {
+		const { selectedText } = await import('../src/perception.ts');
+		document.body.insertAdjacentHTML('beforeend', '<input id="q" type="search" value="cheap flights">');
+		const search = document.querySelector<HTMLInputElement>('#q')!;
+		search.focus();
+		search.setSelectionRange(0, 5);
+		expect(selectedText(document)).toBe('cheap');
+		const pw = document.querySelector<HTMLInputElement>('#pw')!;
+		pw.focus();
+		pw.setSelectionRange(0, 7);
+		expect(selectedText(document)).toBe('');
+	});
+});

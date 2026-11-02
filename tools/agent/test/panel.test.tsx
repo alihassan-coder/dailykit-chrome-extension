@@ -15,13 +15,14 @@ const fake = vi.hoisted(() => ({
 		title: string;
 	} | null,
 	access: true,
+	selection: '',
 	run: null as null | ((opts: RunOptions) => Promise<unknown>)
 }));
 vi.mock('../src/page-api.ts', () => ({
 	activeTab: async () => fake.tab,
 	hasHostAccess: async () => fake.access,
 	requestHostAccess: async () => true,
-	pageApi: () => ({})
+	pageApi: () => ({ selection: async () => fake.selection })
 }));
 vi.mock('../src/loop.ts', () => ({
 	runAgent: (opts: RunOptions) => fake.run!(opts)
@@ -68,6 +69,7 @@ beforeEach(() => {
 	fakeBrowser.reset();
 	fake.tab = { id: 7, windowId: 1, url: 'https://example.com/', title: 'Example' };
 	fake.access = true;
+	fake.selection = '';
 	fake.run = async () => [];
 });
 afterEach(() => {
@@ -87,10 +89,19 @@ describe('Browser agent panel', () => {
 		expect(screen.getByRole('button', { name: 'Send' })).toBeTruthy();
 	});
 
-	it('fills the composer from an example prompt', async () => {
-		const box = (await connected()) as HTMLTextAreaElement;
+	it('runs a quick action in one click', async () => {
+		const tasks: string[] = [];
+		fake.run = async ({ task, onEvent }) => {
+			tasks.push(task);
+			onEvent({ type: 'finished', answer: 'A short summary.' });
+			return [];
+		};
+		await connected();
+		const group = screen.getByRole('group', { name: 'Quick actions' });
+		expect(group.querySelectorAll('button')).toHaveLength(5);
 		fireEvent.click(screen.getByRole('button', { name: 'Summarise this page' }));
-		expect(box.value).toBe('Summarise this page');
+		expect(await screen.findByText('A short summary.')).toBeTruthy();
+		expect(tasks).toEqual(['Summarise this page.']);
 	});
 
 	it('shows the answer as formatted text, and the steps as compact rows', async () => {
@@ -180,10 +191,17 @@ describe('Browser agent panel', () => {
 		};
 		await ask('Click go');
 		const card = await screen.findByRole('alertdialog', { name: 'Approve this action' });
-		expect(document.activeElement).toBe(card);
+		await waitFor(() => expect(document.activeElement).toBe(card));
 		expect(screen.getByText('“Go now”')).toBeTruthy();
 		fireEvent.keyDown(card, { key: 'Enter' });
-		fireEvent.keyDown(await screen.findByRole('alertdialog'), { key: 'Escape' });
+		// The second request mounts a new card; wait for it rather than catching the first one on its way out.
+		await waitFor(() => expect(answers).toEqual(['once']));
+		const second = await waitFor(() => {
+			const next = screen.getByRole('alertdialog', { name: 'Approve this action' });
+			expect(next).not.toBe(card);
+			return next;
+		});
+		fireEvent.keyDown(second, { key: 'Escape' });
 		await screen.findByText('Done.');
 		expect(answers).toEqual(['once', 'decline']);
 	});
@@ -201,6 +219,135 @@ describe('Browser agent panel', () => {
 		fireEvent.click(screen.getAllByRole('button', { name: 'Stop' })[0]!);
 		expect(await screen.findByText('Stopped.')).toBeTruthy();
 		await act(async () => release());
+	});
+});
+
+describe('selection, answers and chats', () => {
+	it('offers the page selection and sends it along with the question', async () => {
+		fake.selection = 'Cats sleep sixteen hours a day.';
+		const seen: { task: string; context?: string }[] = [];
+		fake.run = async ({ task, context, onEvent }) => {
+			seen.push({ task, context });
+			onEvent({ type: 'finished', answer: 'Yes, they do.' });
+			return [];
+		};
+		const box = await connected();
+		fireEvent.click(await screen.findByRole('button', { name: /Use selection \(31 chars\)/ }));
+		expect(screen.getByRole('button', { name: 'Remove the selection' })).toBeTruthy();
+		// With a selection attached, the quick actions work on it.
+		expect(screen.getByRole('button', { name: 'Summarise selection' })).toBeTruthy();
+		fireEvent.change(box, { target: { value: 'Is this true?' } });
+		fireEvent.keyDown(box, { key: 'Enter' });
+		expect(await screen.findByText('Yes, they do.')).toBeTruthy();
+		expect(seen).toEqual([{ task: 'Is this true?', context: 'Cats sleep sixteen hours a day.' }]);
+		expect(screen.queryByRole('button', { name: 'Remove the selection' })).toBeNull();
+	});
+
+	it('copies an answer and shows the tokens it used', async () => {
+		const writeText = vi.fn(async () => {});
+		Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+		fake.run = async ({ onEvent }) => {
+			onEvent({ type: 'finished', answer: 'Forty-two.', usage: { input: 1000, output: 234 } });
+			return [];
+		};
+		await ask('Meaning of life?');
+		fireEvent.click(await screen.findByRole('button', { name: 'Copy answer' }));
+		await waitFor(() => expect(writeText).toHaveBeenCalledWith('Forty-two.'));
+		expect(await screen.findByRole('button', { name: 'Copied' })).toBeTruthy();
+		expect(screen.getByText('1.2k tokens')).toBeTruthy();
+	});
+
+	it('says so when the clipboard is blocked, instead of failing silently', async () => {
+		const writeText = vi.fn(() => Promise.reject(new Error('denied')));
+		Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+		const { Toaster } = await import('@toolbelt/ui');
+		render(<Toaster />);
+		fake.run = async ({ onEvent }) => {
+			onEvent({ type: 'finished', answer: 'Forty-two.' });
+			return [];
+		};
+		await ask('Meaning of life?');
+		fireEvent.click(await screen.findByRole('button', { name: 'Copy answer' }));
+		expect(await screen.findByText('Couldn’t copy')).toBeTruthy();
+	});
+
+	it('retries the latest question from its menu, replacing the old answer', async () => {
+		let calls = 0;
+		fake.run = async ({ onEvent }) => {
+			calls++;
+			onEvent({ type: 'finished', answer: `Answer ${calls}` });
+			return [];
+		};
+		await ask('Pick a number');
+		await screen.findByText('Answer 1');
+		const more = screen.getByRole('button', { name: 'More answer actions' });
+		fireEvent.keyDown(more, { key: 'Enter' });
+		fireEvent.click(await screen.findByRole('menuitem', { name: 'Retry' }));
+		expect(await screen.findByText('Answer 2')).toBeTruthy();
+		expect(screen.queryByText('Answer 1')).toBeNull();
+		expect(screen.getAllByText('Pick a number')).toHaveLength(1);
+	});
+
+	it('keeps the conversation of each tab when the panel closes and opens again', async () => {
+		fake.run = async ({ onEvent }) => {
+			onEvent({ type: 'finished', answer: 'Kept answer.' });
+			return [];
+		};
+		await ask('Remember me');
+		await screen.findByText('Kept answer.');
+		await waitFor(async () => {
+			const saved = await fakeBrowser.storage.session.get('tb:agent:chat:7');
+			expect(saved['tb:agent:chat:7']).toBeTruthy();
+		});
+		cleanup();
+		renderPanel();
+		expect(await screen.findByText('Kept answer.')).toBeTruthy();
+		expect(screen.getByText('Remember me')).toBeTruthy();
+	});
+
+	it('starts a new chat with Ctrl+Shift+O', async () => {
+		fake.run = async ({ onEvent }) => {
+			onEvent({ type: 'finished', answer: 'Old answer.' });
+			return [];
+		};
+		await ask('Old question');
+		await screen.findByText('Old answer.');
+		fireEvent.keyDown(window, { key: 'O', ctrlKey: true, shiftKey: true });
+		await waitFor(() => expect(screen.queryByText('Old answer.')).toBeNull());
+		expect(screen.getByRole('group', { name: 'Quick actions' })).toBeTruthy();
+	});
+
+	it('runs a prompt handed over by the side panel search', async () => {
+		const tasks: string[] = [];
+		fake.run = async ({ task, onEvent }) => {
+			tasks.push(task);
+			onEvent({ type: 'finished', answer: 'Summary here.' });
+			return [];
+		};
+		const { askAgent } = await import('../src/handoff.ts');
+		await askAgent({ text: 'Summarise this page.', send: true });
+		await connected();
+		expect(await screen.findByText('Summary here.')).toBeTruthy();
+		expect(tasks).toEqual(['Summarise this page.']);
+		// Taken once: it does not run again.
+		expect((await fakeBrowser.storage.session.get('tb:agent:draft'))['tb:agent:draft']).toBeFalsy();
+	});
+
+	it('attaches a selection handed over by the right-click menu, and waits for the question', async () => {
+		const { askAgent } = await import('../src/handoff.ts');
+		await askAgent({ text: '', context: 'Some selected words', send: false });
+		await connected();
+		expect(await screen.findByText('“Some selected words”')).toBeTruthy();
+		expect(screen.getByRole('textbox', { name: 'Ask the agent' }).getAttribute('placeholder')).toBe(
+			'Ask about the selection'
+		);
+	});
+});
+
+describe('compactCount', () => {
+	it('shortens token counts', async () => {
+		const { compactCount } = await import('../src/panel.tsx');
+		expect([950, 1234, 25_400, 1_250_000].map(compactCount)).toEqual(['950', '1.2k', '25k', '1.3M']);
 	});
 });
 

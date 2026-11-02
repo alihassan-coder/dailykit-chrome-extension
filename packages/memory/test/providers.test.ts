@@ -13,7 +13,7 @@ function recorder(reply: unknown) {
 
 describe('choosing models', () => {
 	it('needs OpenAI or Gemini for embeddings', () => {
-		expect(chooseEmbedder({ anthropic: 'k', xai: 'k' })).toBeNull();
+		expect(chooseEmbedder({ anthropic: 'k', xai: 'k', groq: 'k' })).toBeNull();
 		expect(chooseEmbedder({ gemini: 'k' })?.id).toBe('gemini/gemini-embedding-001@768');
 		expect(chooseEmbedder({ gemini: 'k', openai: 'k' })?.id).toBe('openai/text-embedding-3-small@512');
 	});
@@ -27,6 +27,10 @@ describe('choosing models', () => {
 			'gemini-2.5-flash-lite'
 		);
 		expect(cheapestModel('xai', [])).toBe('grok-4-fast-non-reasoning');
+		expect(cheapestModel('groq', ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant'])).toBe(
+			'llama-3.1-8b-instant'
+		);
+		expect(cheapestModel('groq', [])).toBe('openai/gpt-oss-20b');
 		expect(cheapestModel('anthropic')).toBe('claude-haiku-5-5');
 	});
 
@@ -38,20 +42,12 @@ describe('choosing models', () => {
 });
 
 describe('provider adapters', () => {
-	it('uses the Claude subscription protocol for memory extraction', async () => {
+	it('refuses a Claude subscription token without sending it', async () => {
 		const token = `sk-ant-oat01-${'x'.repeat(90)}`;
 		const { calls, fetchFn } = recorder({ content: [{ type: 'text', text: '{}' }] });
 		const llm = createLlm({ provider: 'anthropic', model: 'claude-haiku-5-5' }, token, fetchFn);
-		await llm.generateChat([
-			{ role: 'system', content: 'Extract facts' },
-			{ role: 'user', content: 'Hi' }
-		]);
-		expect(calls[0]!.headers.Authorization).toBe(`Bearer ${token}`);
-		expect(calls[0]!.headers['x-api-key']).toBeUndefined();
-		expect(calls[0]!.body.system).toEqual([
-			{ type: 'text', text: "You are Claude Code, Anthropic's official CLI for Claude." },
-			{ type: 'text', text: 'Extract facts' }
-		]);
+		await expect(llm.generateChat([{ role: 'user', content: 'Hi' }])).rejects.toThrow(/Anthropic API key/);
+		expect(calls).toHaveLength(0);
 	});
 	it('embeds with Gemini in one batch, shortened and normalised', async () => {
 		const { calls, fetchFn } = recorder({ embeddings: [{ values: [3, 4] }, { values: [0, 2] }] });
@@ -103,6 +99,15 @@ describe('provider adapters', () => {
 			contents: [{ role: 'user', parts: [{ text: 'U' }] }],
 			generationConfig: { responseMimeType: 'application/json' }
 		});
+	});
+
+	it('extracts with Groq through its OpenAI-compatible endpoint', async () => {
+		const { calls, fetchFn } = recorder({ choices: [{ message: { content: '{"facts":[]}' } }] });
+		const llm = createLlm({ provider: 'groq', model: 'openai/gpt-oss-20b' }, 'gsk_key', fetchFn);
+		expect(await llm.generateResponse([{ role: 'user', content: 'Hi' }], { type: 'json_object' })).toBe('{"facts":[]}');
+		expect(calls[0]!.url).toBe('https://api.groq.com/openai/v1/chat/completions');
+		expect(calls[0]!.headers.authorization).toBe('Bearer gsk_key');
+		expect(calls[0]!.body).toMatchObject({ model: 'openai/gpt-oss-20b', response_format: { type: 'json_object' } });
 	});
 
 	it('reports a rejected key plainly', async () => {

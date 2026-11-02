@@ -15,16 +15,15 @@ import { choiceProblem } from '../src/useModels.ts';
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
 describe('fetchModels', () => {
-	it('lists Claude models using bearer authentication for setup tokens', async () => {
-		const token = `sk-ant-oat01-${'x'.repeat(90)}`;
+	it('lists Claude models with an API key, and rejects a key the provider refuses', async () => {
+		const key = `sk-ant-api03-${'x'.repeat(90)}`;
 		const fetchFn = vi.fn().mockResolvedValue(reply({ data: [{ id: 'claude-haiku-5-5' }] }));
-		await fetchModels('anthropic', token, fetchFn);
+		await fetchModels('anthropic', key, fetchFn);
 		const headers = fetchFn.mock.calls[0]![1].headers;
-		expect(headers.Authorization).toBe(`Bearer ${token}`);
-		expect(headers['x-api-key']).toBeUndefined();
-		expect(headers['anthropic-beta']).toContain('oauth-2025-04-20');
-		await expect(fetchModels('anthropic', token, vi.fn().mockResolvedValue(reply({}, 401)))).rejects.toThrow(
-			'claude setup-token'
+		expect(headers['x-api-key']).toBe(key);
+		expect(headers.Authorization).toBeUndefined();
+		await expect(fetchModels('anthropic', key, vi.fn().mockResolvedValue(reply({}, 401)))).rejects.toThrow(
+			'rejected this API key'
 		);
 	});
 	it('reads every page of Anthropic models with display names', async () => {
@@ -62,6 +61,50 @@ describe('fetchModels', () => {
 		expect(fetchFn.mock.calls[0]![0]).toBe('https://api.openai.com/v1/models');
 		await fetchModels('xai', 'xai-k', fetchFn);
 		expect(fetchFn.mock.calls[1]![0]).toBe('https://api.x.ai/v1/models');
+	});
+
+	it('keeps Groq chat models with their context windows, and marks tools and vision', async () => {
+		const fetchFn = vi.fn<typeof fetch>(async () =>
+			reply({
+				data: [
+					{ id: 'llama-3.3-70b-versatile', context_window: 131072, active: true },
+					{ id: 'meta-llama/llama-4-scout-17b-16e-instruct', context_window: 131072 },
+					{ id: 'moonshotai/kimi-k2-instruct-0905', context_window: 262144 },
+					{ id: 'groq/compound', context_window: 131072 },
+					{ id: 'whisper-large-v3' },
+					{ id: 'distil-whisper-large-v3-en' },
+					{ id: 'playai-tts' },
+					{ id: 'canopylabs/orpheus-v1-english' },
+					{ id: 'meta-llama/llama-guard-4-12b', context_window: 131072 },
+					{ id: 'meta-llama/llama-prompt-guard-2-86m' },
+					{ id: 'openai/gpt-oss-safeguard-20b' },
+					{ id: 'old-model', active: false }
+				]
+			})
+		);
+		const models = await fetchModels('groq', 'gsk_k', fetchFn);
+		expect(fetchFn.mock.calls[0]![0]).toBe('https://api.groq.com/openai/v1/models');
+		expect((fetchFn.mock.calls[0]![1]!.headers as Record<string, string>).Authorization).toBe('Bearer gsk_k');
+		expect(models.map((m) => m.id)).toEqual([
+			'moonshotai/kimi-k2-instruct-0905',
+			'meta-llama/llama-4-scout-17b-16e-instruct',
+			'llama-3.3-70b-versatile',
+			'groq/compound'
+		]);
+		const byId = Object.fromEntries(models.map((m) => [m.id, m]));
+		expect(formatContext(byId['moonshotai/kimi-k2-instruct-0905']!.context)).toBe('262K');
+		expect(byId['llama-3.3-70b-versatile']!.context).toBe(131072);
+		expect(byId['meta-llama/llama-4-scout-17b-16e-instruct']).toMatchObject({
+			name: 'Llama 4 scout 17b 16e instruct',
+			vision: true
+		});
+		expect(byId['llama-3.3-70b-versatile']!.vision).toBeUndefined();
+		expect(supportsTools(byId['llama-3.3-70b-versatile']!)).toBe(true);
+		expect(supportsTools(byId['groq/compound']!)).toBe(false);
+	});
+
+	it('offers verified Groq models before the first load', () => {
+		expect(available({}, { groq: 'gsk_k' }).map((m) => m.id)).toContain('openai/gpt-oss-120b');
 	});
 
 	it('keeps Gemini models that generate content, without the models/ prefix', async () => {

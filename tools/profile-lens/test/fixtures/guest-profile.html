@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- The signed-out public view of a profile: a reduced top card, sign-in prompts, and a schema.org Person. -->
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Jane Doe - Acme | LinkedIn</title>
+		<script type="application/ld+json">
+			{
+				"@context": "http://schema.org",
+				"@graph": [
+					{
+						"@type": "Person",
+						"name": "Jane Doe",
+						"url": "https://de.linkedin.com/in/jane-doe",
+						"jobTitle": ["Head of Growth"],
+						"address": { "@type": "PostalAddress", "addressLocality": "Berlin", "addressCountry": "DE" },
+						"description": "I help B2B software teams grow pipeline.",
+						"worksFor": [{ "@type": "Organization", "name": "Acme", "member": { "startDate": "2021-01" } }],
+						"alumniOf": [
+							{
+								"@type": "Organization",
+								"name": "Beta GmbH",
+								"member": { "startDate": "2017-03", "endDate": "2020-12" }
+							},
+							{
+								"@type": "EducationalOrganization",
+								"name": "TU Berlin",
+								"member": { "startDate": "2012", "endDate": "2015" }
+							}
+						]
+					},
+					{ "@type": "WebPage", "url": "https://de.linkedin.com/in/jane-doe" }
+				]
+			}
+		</script>
+	</head>
+	<body>
+		<nav class="nav"><a class="nav__button-secondary" href="https://www.linkedin.com/login">Sign in</a></nav>
+		<main class="main" id="main-content">
+			<section class="top-card-layout" data-tracking-control-name="public_profile_top-card">
+				<h1 class="top-card-layout__title">Jane Doe</h1>
+				<h2 class="top-card-layout__headline">Head of Growth at Acme</h2>
+			</section>
+			<section data-tracking-control-name="public_profile_experience">
+				<h2>Experience</h2>
+				<p>Sign in to see who you already know at Acme</p>
+			</section>
+		</main>
+	</body>
+</html>

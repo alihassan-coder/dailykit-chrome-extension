@@ -1,28 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import {
-	PROVIDERS,
-	isClaudeSetupToken,
-	looksLikeClaudeSetupToken,
-	looksLikeKey,
-	maskKey,
-	resolveApiKeys
-} from '../src/ai-keys.ts';
+import { PROVIDERS, isClaudeSetupToken, looksLikeKey, maskKey, resolveApiKeys } from '../src/ai-keys.ts';
 
 describe('AI provider keys', () => {
-	it('accepts complete setup tokens, rejects truncated or mixed input, and preserves storage compatibility', () => {
+	it('recognises Claude subscription tokens (refused elsewhere) and keeps a saved one readable', () => {
 		const token = `sk-ant-oat01-${'x'.repeat(90)}`;
-		expect(isClaudeSetupToken(token)).toBe(true);
+		expect(isClaudeSetupToken(` ${token} `)).toBe(true);
 		expect(isClaudeSetupToken('sk-ant-api03-test')).toBe(false);
-		expect(looksLikeClaudeSetupToken(` ${token} `)).toBe(true);
-		expect(looksLikeClaudeSetupToken('sk-ant-oat01-short')).toBe(false);
-		expect(looksLikeClaudeSetupToken(`${token}\nextra text`)).toBe(false);
 		expect(resolveApiKeys({ anthropic: token, openai: 'sk-existing' })).toEqual({
 			anthropic: token,
 			openai: 'sk-existing'
 		});
 	});
-	it('supports Anthropic, OpenAI, xAI Grok and Google Gemini', () => {
-		expect(PROVIDERS.map((p) => p.id)).toEqual(['anthropic', 'openai', 'xai', 'gemini']);
+	it('supports Anthropic, OpenAI, xAI Grok, Google Gemini and Groq', () => {
+		expect(PROVIDERS.map((p) => p.id)).toEqual(['anthropic', 'openai', 'xai', 'gemini', 'groq']);
+		expect(PROVIDERS.find((p) => p.id === 'groq')).toEqual({
+			id: 'groq',
+			name: 'Groq',
+			product: 'GroqCloud',
+			keyHint: 'gsk_',
+			consoleUrl: 'https://console.groq.com/keys'
+		});
+		expect(looksLikeKey('groq', `gsk_${'x'.repeat(52)}`)).toBe(true);
+		expect(resolveApiKeys({ groq: ' gsk_abc ' })).toEqual({ groq: 'gsk_abc' });
 	});
 
 	it('keeps known providers with real values only', () => {

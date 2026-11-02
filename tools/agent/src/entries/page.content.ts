@@ -3,7 +3,7 @@
 import { browser } from 'wxt/browser';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { act, focusedTarget, target, waitFor } from '../actuation.ts';
-import { RefRegistry, find, pageText, readPage } from '../perception.ts';
+import { RefRegistry, find, pageText, readPage, selectedText } from '../perception.ts';
 import { isPageRequest, type PageRequest } from '../protocol.ts';
 import { ALL_SITES } from '../sites.ts';
 
@@ -59,6 +59,8 @@ export default defineContentScript({
 					return find(document, registry, req.query);
 				case 'agent:text':
 					return pageText(document);
+				case 'agent:selection':
+					return selectedText(document);
 				case 'agent:target':
 					return target(registry, req.ref);
 				case 'agent:focused':

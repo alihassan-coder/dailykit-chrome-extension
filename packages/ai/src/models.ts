@@ -1,5 +1,5 @@
 // The models each provider offers for the user's key, fetched live (not hard-coded) and cached for a day.
-import { anthropicAuthHeaders, type ApiKeys, type ProviderId } from '@toolbelt/core';
+import { anthropicAuthHeaders, isClaudeSetupToken, type ApiKeys, type ProviderId } from '@toolbelt/core';
 
 export interface ModelInfo {
 	provider: ProviderId;
@@ -26,6 +26,13 @@ export const FALLBACK: Partial<Record<ProviderId, ModelInfo[]>> = {
 		{ provider: 'anthropic', id: 'claude-opus-5-5', name: 'Claude Opus 5.5' },
 		{ provider: 'anthropic', id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5' },
 		{ provider: 'anthropic', id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5' }
+	],
+	// Groq's production models (console.groq.com/docs/models); the live list replaces these once it loads.
+	groq: [
+		{ provider: 'groq', id: 'openai/gpt-oss-120b', name: 'GPT oss 120b', context: 131_072 },
+		{ provider: 'groq', id: 'openai/gpt-oss-20b', name: 'GPT oss 20b', context: 131_072 },
+		{ provider: 'groq', id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70b versatile', context: 131_072 },
+		{ provider: 'groq', id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8b instant', context: 131_072 }
 	]
 };
 
@@ -36,10 +43,17 @@ export function keyTag(key: string): string {
 	return (h >>> 0).toString(36);
 }
 
-// OpenAI and xAI list every model they host; keep the ones that chat and call tools.
+// OpenAI, xAI and Groq list every model they host; keep the ones that chat and call tools.
 const NOT_CHAT =
 	/(embed|tts|whisper|transcribe|dall-e|image|moderation|realtime|audio|search|babbage|davinci|computer-use|codex-mini)/i;
 export const isChatModel = (id: string) => !NOT_CHAT.test(id);
+
+// Groq also hosts speech models and safety classifiers (Llama Guard, Prompt Guard, gpt-oss-safeguard).
+const GROQ_NOT_CHAT = /(whisper|playai|orpheus|tts|guard)/i;
+/** Groq chat models that cannot take the agent's tools: Compound runs only its own built-in tools; ALLaM has none. */
+const GROQ_NO_TOOLS = /(compound|allam)/i;
+// Groq's vision models, by id: Llama 4 Scout and Maverick.
+const GROQ_VISION = /llama-4-(scout|maverick)/i;
 
 // Listed as chat models, but they cannot call tools (so they cannot run the browser agent).
 const NO_TOOLS = /(gemma|learnlm|aqa|nano-banana|-image|imagen|veo|-tts|o1-mini|o1-preview)/i;
@@ -61,7 +75,11 @@ const BRANDS: Record<string, string> = {
 	chatgpt: 'ChatGPT',
 	grok: 'Grok',
 	gemini: 'Gemini',
-	claude: 'Claude'
+	claude: 'Claude',
+	llama: 'Llama',
+	qwen: 'Qwen',
+	qwen3: 'Qwen3',
+	kimi: 'Kimi'
 };
 export const pretty = (id: string) => {
 	const words = id.split(/[-_ ]+/).filter(Boolean);
@@ -86,11 +104,7 @@ async function getJson(url: string, headers: Record<string, string>, fetchFn: ty
 		throw new ModelsError('You seem to be offline.');
 	}
 	if (res.status === 401 || res.status === 403) {
-		throw new ModelsError(
-			headers.Authorization?.startsWith('Bearer sk-ant-oat01-')
-				? 'Claude rejected this setup token. Run claude setup-token again and replace it in AI providers.'
-				: 'The provider rejected this API key.'
-		);
+		throw new ModelsError('The provider rejected this API key.');
 	}
 	if (res.status === 429) throw new ModelsError('Too many requests; try again in a minute.');
 	if (!res.ok) throw new ModelsError(`The provider answered ${res.status}.`);
@@ -106,6 +120,8 @@ export async function fetchModels(
 ): Promise<ModelInfo[]> {
 	const out: ModelInfo[] = [];
 	if (provider === 'anthropic') {
+		if (isClaudeSetupToken(key))
+			throw new ModelsError('Claude subscription tokens only work in Anthropic’s apps. Add an Anthropic API key.');
 		let after = '';
 		for (;;) {
 			const body = (await getJson(
@@ -123,6 +139,28 @@ export async function fetchModels(
 		for (const m of body.data ?? []) {
 			const id = String(m.id);
 			if (isChatModel(id)) out.push({ provider, id, name: pretty(id) });
+		}
+		out.sort((a, b) => b.id.localeCompare(a.id));
+	} else if (provider === 'groq') {
+		const body = (await getJson(
+			'https://api.groq.com/openai/v1/models',
+			{ Authorization: `Bearer ${key}` },
+			fetchFn
+		)) as {
+			data?: Json[];
+		};
+		for (const m of body.data ?? []) {
+			const id = String(m.id);
+			if (m.active === false || !isChatModel(id) || GROQ_NOT_CHAT.test(id)) continue;
+			out.push({
+				provider,
+				id,
+				// "meta-llama/llama-4-scout-17b-16e-instruct" → "Llama 4 scout 17b 16e instruct".
+				name: pretty(id.split('/').at(-1) ?? id),
+				context: num(m.context_window),
+				...(GROQ_VISION.test(id) ? { vision: true } : {}),
+				...(GROQ_NO_TOOLS.test(id) ? { tools: false } : {})
+			});
 		}
 		out.sort((a, b) => b.id.localeCompare(a.id));
 	} else {
@@ -189,7 +227,7 @@ export async function refresh(
 
 /** Models to offer: live lists, or the verified fallback for a provider that has none yet. */
 export function available(cache: ModelCache, keys: ApiKeys): ModelInfo[] {
-	return (['anthropic', 'openai', 'xai', 'gemini'] as ProviderId[])
+	return (['anthropic', 'openai', 'xai', 'gemini', 'groq'] as ProviderId[])
 		.filter((p) => keys[p])
 		.flatMap((p) => (cache[p]?.key === keyTag(keys[p]!) ? cache[p]?.models : undefined) ?? FALLBACK[p] ?? []);
 }
