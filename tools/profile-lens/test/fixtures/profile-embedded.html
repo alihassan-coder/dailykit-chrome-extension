@@ -1,0 +1,77 @@
+<!doctype html>
+<!-- A signed-in profile page as LinkedIn sends it: the global nav, the visible profile, and its page data as
+     HTML-escaped JSON in hidden <code> elements (including the viewer's own profile, which must be ignored). -->
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Jane Doe | LinkedIn</title>
+	</head>
+	<body>
+		<header id="global-nav" class="global-nav">
+			<a href="https://www.linkedin.com/feed/">Home</a>
+			<a href="https://www.linkedin.com/in/viewer-me/"><span>Me</span></a>
+		</header>
+		<!-- prettier-ignore -->
+		<code style="display: none" id="bpr-guid-1001">{&quot;data&quot;:{&quot;$type&quot;:&quot;com.linkedin.restli.common.CollectionResponse&quot;,&quot;*elements&quot;:[&quot;urn:li:fsd_profile:ACoAAJane&quot;]},&quot;included&quot;:[{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Profile&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_profile:ACoAAJane&quot;,&quot;publicIdentifier&quot;:&quot;jane-doe&quot;,&quot;firstName&quot;:&quot;Jane&quot;,&quot;lastName&quot;:&quot;Doe&quot;,&quot;headline&quot;:&quot;Head of Growth at Acme | B2B SaaS&quot;,&quot;summary&quot;:&quot;I help B2B software teams grow pipeline.\nPreviously scaled Beta from 10 to 120 people.&quot;,&quot;geoLocation&quot;:{&quot;*geo&quot;:&quot;urn:li:fsd_geo:101&quot;}},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.common.Geo&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_geo:101&quot;,&quot;defaultLocalizedName&quot;:&quot;Berlin, Germany&quot;},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Profile&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_profile:ACoAAViewer&quot;,&quot;publicIdentifier&quot;:&quot;viewer-me&quot;,&quot;firstName&quot;:&quot;Viewer&quot;,&quot;lastName&quot;:&quot;Person&quot;,&quot;headline&quot;:&quot;CEO at ViewerCo&quot;}]}</code>
+		<!-- prettier-ignore -->
+		<code style="display: none" id="bpr-guid-1002">{&quot;data&quot;:{&quot;$type&quot;:&quot;com.linkedin.restli.common.CollectionResponse&quot;},&quot;included&quot;:[{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Position&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_position:(ACoAAJane,1)&quot;,&quot;title&quot;:&quot;Analyst&quot;,&quot;companyName&quot;:&quot;Gamma&quot;,&quot;dateRange&quot;:{&quot;start&quot;:{&quot;year&quot;:2015,&quot;month&quot;:6},&quot;end&quot;:{&quot;year&quot;:2017,&quot;month&quot;:6}}},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Position&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_position:(ACoAAJane,3)&quot;,&quot;title&quot;:&quot;Head of Growth&quot;,&quot;companyName&quot;:&quot;Acme&quot;,&quot;dateRange&quot;:{&quot;start&quot;:{&quot;year&quot;:2021,&quot;month&quot;:1}},&quot;locationName&quot;:&quot;Berlin, Germany&quot;,&quot;description&quot;:&quot;Built the outbound team from zero to eight people.&quot;},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Position&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_position:(ACoAAJane,2)&quot;,&quot;title&quot;:&quot;Marketing Lead&quot;,&quot;companyName&quot;:&quot;Beta GmbH&quot;,&quot;dateRange&quot;:{&quot;start&quot;:{&quot;year&quot;:2017,&quot;month&quot;:3},&quot;end&quot;:{&quot;year&quot;:2020,&quot;month&quot;:12}}},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Position&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_position:(ACoAAViewer,1)&quot;,&quot;title&quot;:&quot;CEO&quot;,&quot;companyName&quot;:&quot;ViewerCo&quot;,&quot;dateRange&quot;:{&quot;start&quot;:{&quot;year&quot;:2010,&quot;month&quot;:1}}},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Education&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_education:(ACoAAJane,1)&quot;,&quot;schoolName&quot;:&quot;TU Berlin&quot;,&quot;degreeName&quot;:&quot;MSc&quot;,&quot;fieldOfStudy&quot;:&quot;Economics&quot;,&quot;dateRange&quot;:{&quot;start&quot;:{&quot;year&quot;:2012},&quot;end&quot;:{&quot;year&quot;:2015}}},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Skill&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_skill:(ACoAAJane,1)&quot;,&quot;name&quot;:&quot;Growth Marketing&quot;},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Skill&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_skill:(ACoAAJane,2)&quot;,&quot;name&quot;:&quot;SaaS&quot;},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Skill&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_skill:(ACoAAJane,3)&quot;,&quot;name&quot;:&quot;Sales&quot;},{&quot;$type&quot;:&quot;com.linkedin.voyager.dash.identity.profile.Certification&quot;,&quot;entityUrn&quot;:&quot;urn:li:fsd_certification:(ACoAAJane,1)&quot;,&quot;name&quot;:&quot;Inbound Marketing&quot;,&quot;authority&quot;:&quot;HubSpot&quot;}]}</code>
+		<!-- prettier-ignore -->
+		<code style="display: none" id="datalet-bpr-guid-1003">{&quot;request&quot;:&quot;/voyager/api/identity/dash/profiles&quot;,&quot;status&quot;:200,&quot;body&quot;:&quot;bpr-guid-1001&quot;}</code>
+		<main class="scaffold-layout__main">
+			<section class="artdeco-card pv-top-card">
+				<img
+					src="https://media.licdn.com/dms/image/v2/C4D03AQ/profile-displayphoto-shrink_400_400/0/1.jpg"
+					alt="Jane Doe"
+				/>
+				<h1 class="text-heading-xlarge">Jane Doe</h1>
+				<div class="text-body-medium">Head of Growth at Acme | B2B SaaS</div>
+				<span class="text-body-small">Berlin, Germany</span>
+				<a href="https://www.linkedin.com/in/jane-doe/overlay/contact-info/">Contact info</a>
+				<ul>
+					<li><span>500+ connections</span></li>
+				</ul>
+			</section>
+			<section class="artdeco-card">
+				<h2><span aria-hidden="true">About</span><span class="visually-hidden">About</span></h2>
+				<div class="inline-show-more-text">
+					<span aria-hidden="true"
+						>I help B2B software teams grow pipeline. Previously scaled Beta from 10 to 120 people.</span
+					>
+				</div>
+			</section>
+			<section class="artdeco-card">
+				<h2><span aria-hidden="true">Experience</span><span class="visually-hidden">Experience</span></h2>
+				<ul>
+					<li class="artdeco-list__item">
+						<span aria-hidden="true">Head of Growth</span><span class="visually-hidden">Head of Growth</span>
+						<span aria-hidden="true">Acme · Full-time</span>
+						<span aria-hidden="true">Jan 2021 - Present · 5 yrs 11 mos</span>
+					</li>
+					<li class="artdeco-list__item">
+						<span aria-hidden="true">Marketing Lead</span>
+						<span aria-hidden="true">Beta GmbH</span>
+						<span aria-hidden="true">Mar 2017 - Dec 2020 · 3 yrs 10 mos</span>
+					</li>
+				</ul>
+				<a href="https://www.linkedin.com/in/jane-doe/details/experience/">Show all 3 experiences</a>
+			</section>
+			<section class="artdeco-card">
+				<h2><span aria-hidden="true">Skills</span><span class="visually-hidden">Skills</span></h2>
+				<ul>
+					<li><span aria-hidden="true">Growth Marketing</span><span aria-hidden="true">12 endorsements</span></li>
+					<li><span aria-hidden="true">SaaS</span></li>
+				</ul>
+				<a href="https://www.linkedin.com/in/jane-doe/details/skills/">Show all 3 skills</a>
+			</section>
+			<section class="artdeco-card">
+				<h2><span aria-hidden="true">Activity</span></h2>
+				<p>Jane posted this • 2d</p>
+				<p>We are hiring two SDRs in Berlin. Join now to see what we are building!</p>
+			</section>
+		</main>
+		<aside class="scaffold-layout__aside">
+			<h2>People also viewed</h2>
+			<a href="https://www.linkedin.com/in/someone-else/">Someone Else</a>
+		</aside>
+	</body>
+</html>

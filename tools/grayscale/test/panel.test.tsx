@@ -14,8 +14,13 @@ beforeEach(() => {
 	vi.spyOn(fakeBrowser.tabs, 'query').mockImplementation(
 		async () => [{ url: 'https://www.figma.com/file/abc' }] as never
 	);
+	// No shortcut set, unless a test says otherwise.
+	vi.spyOn(fakeBrowser.commands, 'getAll').mockResolvedValue([] as never);
 });
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	vi.restoreAllMocks();
+});
 
 describe('Black and white panel', () => {
 	it('switches black and white on for every site', async () => {
@@ -67,5 +72,54 @@ describe('Black and white panel', () => {
 	it('explains the empty list of colour sites', async () => {
 		render(<GrayscalePanel />);
 		expect(await screen.findByText('Every site goes black and white')).toBeTruthy();
+	});
+
+	it('turns on automatically between two times you pick', async () => {
+		render(<GrayscalePanel />);
+		fireEvent.click(await screen.findByRole('switch', { name: 'Turn on automatically between two times' }));
+		await waitFor(async () =>
+			expect(await saved()).toMatchObject({ schedule: { on: true, from: '22:00', to: '07:00' } })
+		);
+		expect(await screen.findByText('Every day, between these times')).toBeTruthy();
+		fireEvent.change(screen.getByLabelText('From'), { target: { value: '21:30' } });
+		await waitFor(async () => expect(await saved()).toMatchObject({ schedule: { from: '21:30' } }));
+		// Half-typed times are not saved.
+		fireEvent.change(screen.getByLabelText('To'), { target: { value: '' } });
+		expect(await saved()).toMatchObject({ schedule: { to: '07:00' } });
+	});
+
+	it('says when the schedule has it on', async () => {
+		vi.useFakeTimers({ now: new Date('2026-11-02T23:00:00'), toFake: ['Date'] });
+		await fakeBrowser.storage.local.set({
+			'tb:grayscale:state': { on: false, strength: 100, skip: [], schedule: { on: true, from: '22:00', to: '07:00' } }
+		});
+		render(<GrayscalePanel />);
+		expect(await screen.findByText('On by schedule')).toBeTruthy();
+		expect(screen.getByText('· until 07:00', { exact: false })).toBeTruthy();
+		vi.useRealTimers();
+	});
+
+	it('shows the keyboard shortcut that toggles the current site', async () => {
+		vi.spyOn(fakeBrowser.commands, 'getAll').mockResolvedValue([
+			{ name: 'toggle-grayscale', shortcut: 'Alt+Shift+G' }
+		] as never);
+		render(<GrayscalePanel />);
+		expect(await screen.findByText('Shift')).toBeTruthy();
+		expect(screen.getByText('G')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Change' })).toBeTruthy();
+	});
+});
+
+describe('toggleForUrl', () => {
+	it('flips the site in a tab, and leaves browser pages alone', async () => {
+		const { toggleForUrl, toggleMessage } = await import('../src/actions.ts');
+		expect(await toggleForUrl('chrome://settings')).toBeNull();
+		const first = await toggleForUrl('https://www.example.com/a');
+		expect(first).toEqual({ site: 'example.com', result: 'on' });
+		expect(await saved()).toMatchObject({ on: true });
+		const second = await toggleForUrl('https://example.com/b');
+		expect(second?.result).toBe('kept-in-colour');
+		expect(await saved()).toMatchObject({ skip: ['example.com'] });
+		expect(toggleMessage('example.com', 'kept-in-colour')).toBe('example.com is kept in colour');
 	});
 });

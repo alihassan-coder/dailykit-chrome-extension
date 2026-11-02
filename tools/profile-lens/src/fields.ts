@@ -171,14 +171,24 @@ const FACTS = z.object({
 });
 
 /** The lenient schema the model fills in. Its output always goes through `normalizeAnalysis`. */
-export function analysisSchema(set: QuestionSet) {
+export function analysisSchema(set: QuestionSet, options: { lenient?: boolean } = {}) {
+	// The model is asked for every part. When checking its answer (lenient), a missing extra (quotes, what's
+	// missing, follow-ups) falls back to empty instead of failing the whole analysis.
+	const list = (s: z.ZodArray<z.ZodString>) => (options.lenient ? s.catch([]) : s);
+	const text = (s: z.ZodString) => (options.lenient ? s.catch('') : s);
 	const answers = Object.fromEntries(
 		set.fields.map((f) => [
 			f.id,
 			z.object({
 				value: valueSchema(f),
-				evidence: z.string().describe('What on the profile supports this, briefly; empty when value is null'),
-				confidence: z.string().describe('high, medium or low')
+				evidence: z.string().describe('Why, in one short sentence; empty when value is null'),
+				quotes: list(z.array(z.string())).describe(
+					'1–3 short quotes copied word for word from the profile that support the answer; empty if none'
+				),
+				confidence: z.string().describe('high, medium or low'),
+				missing: text(z.string()).describe(
+					'When confidence is low or value is null: what the profile is missing to answer, in a few words; else empty'
+				)
 			})
 		])
 	);
@@ -189,7 +199,12 @@ export function analysisSchema(set: QuestionSet) {
 			reasons: z.array(z.string()).describe('2–4 short reasons, for and against')
 		}),
 		answers: z.object(answers),
-		summary: z.string().describe('Two or three sentences on who this person is, for the user')
+		summary: z
+			.string()
+			.describe('Two or three short sentences: who this person is, how senior, and what they focus on now'),
+		followUps: list(z.array(z.string())).describe(
+			'Three short follow-up questions the user might ask next about this person, specific to this profile and the ICP'
+		)
 	});
 }
 
@@ -207,13 +222,23 @@ export interface Facts {
 	postTopics: string[];
 }
 
-export type Answer = { value: unknown; evidence: string; confidence: Confidence };
+export type Answer = {
+	value: unknown;
+	evidence: string;
+	confidence: Confidence;
+	/** Exact words from the profile; only quotes that really appear there are kept. Missing on older analyses. */
+	quotes?: string[];
+	/** For low-confidence answers: what the profile would need to say. */
+	missing?: string;
+};
 
 export interface Analysis {
 	facts: Facts;
 	icp: { score: number; verdict: Verdict; reasons: string[] };
 	answers: Record<string, Answer>;
 	summary: string;
+	/** Questions to ask next, shown as chips. Missing on older analyses. */
+	followUps?: string[];
 }
 
 /** The verdict follows the score, so the two never disagree. Matches the rubric in the prompt. */
@@ -262,31 +287,67 @@ const strOrNull = (v: unknown) => str(v) || null;
 const strList = (v: unknown) => (Array.isArray(v) ? [...new Set(v.map(str).filter(Boolean))] : []);
 const CONFIDENCES: readonly Confidence[] = ['high', 'medium', 'low'];
 
+/** Lowercase letters and digits only, so a quote matches the profile whatever its spacing, quotes or dashes. */
+const comparable = (t: string) =>
+	t
+		.toLowerCase()
+		.replace(/[^\p{L}\p{N}]+/gu, ' ')
+		.trim();
+
+/** Quotes that really are in the profile text (when we have it), short and without repeats. */
+export function verifiedQuotes(raw: unknown, source?: string): string[] {
+	const haystack = source === undefined ? null : ` ${comparable(source)} `;
+	return strList(raw)
+		.map((q) => q.replace(/^["“'‘]+|["”'’]+$/g, '').trim())
+		.filter((q) => q.length >= 3 && q.length <= 240)
+		.filter((q) => !haystack || haystack.includes(` ${comparable(q)} `))
+		.slice(0, 3);
+}
+
+/** What normalizeAnalysis can check the model against. */
+export interface Grounding {
+	/** The profile text the model read: quotes not found in it are dropped. */
+	source?: string;
+	/** Facts computed in code from the profile's dates; they win over the model's estimate. */
+	experienceMonths?: number | null;
+	currentCompany?: string | null;
+	currentRole?: string | null;
+	location?: string | null;
+}
+
 /** Turns the model's lenient output into a checked Analysis for this set. Never throws. */
-export function normalizeAnalysis(raw: unknown, set: QuestionSet): Analysis {
+export function normalizeAnalysis(raw: unknown, set: QuestionSet, grounding: Grounding = {}): Analysis {
 	const r = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, Record<string, unknown> | undefined>;
 	const facts = r.facts ?? {};
 	const icp = r.icp ?? {};
 	const rawAnswers = r.answers ?? {};
-	const years = finite(facts.yearsOfExperience);
+	const computedYears =
+		grounding.experienceMonths === null || grounding.experienceMonths === undefined
+			? null
+			: grounding.experienceMonths / 12;
+	const years = computedYears ?? finite(facts.yearsOfExperience);
 	const score = clamp(Math.round(finite(icp.score) ?? 0), 0, 100);
 	const answers: Record<string, Answer> = {};
 	for (const f of set.fields) {
 		const a = (rawAnswers[f.id] ?? {}) as Record<string, unknown>;
 		const value = normalizeValue(f, a.value);
 		const empty = value === null || (Array.isArray(value) && value.length === 0);
-		answers[f.id] = {
-			value,
-			evidence: empty ? '' : str(a.evidence),
-			confidence: empty ? 'low' : (snapOption(CONFIDENCES, a.confidence) ?? 'low')
-		};
+		const quotes = empty ? [] : verifiedQuotes(a.quotes, grounding.source);
+		const evidence = empty ? '' : str(a.evidence);
+		let confidence: Confidence = empty ? 'low' : (snapOption(CONFIDENCES, a.confidence) ?? 'low');
+		// "High" needs something to stand on: a quote that is really there, or at least a reason.
+		if (confidence === 'high' && !quotes.length && !evidence) confidence = 'medium';
+		const answer: Answer = { value, evidence, confidence, quotes };
+		if (confidence === 'low') answer.missing = str(a.missing) || (empty ? 'The profile doesn’t say.' : '');
+		if (!answer.missing) delete answer.missing;
+		answers[f.id] = answer;
 	}
 	return {
 		facts: {
 			headline: str(facts.headline),
-			location: strOrNull(facts.location),
-			currentRole: strOrNull(facts.currentRole),
-			currentCompany: strOrNull(facts.currentCompany),
+			location: strOrNull(facts.location) ?? grounding.location ?? null,
+			currentRole: strOrNull(facts.currentRole) ?? grounding.currentRole ?? null,
+			currentCompany: strOrNull(facts.currentCompany) ?? grounding.currentCompany ?? null,
 			yearsOfExperience: years === null ? null : Math.max(0, Math.round(years)),
 			seniority: snapOption(SENIORITY, facts.seniority),
 			companies: strList(facts.companies),
@@ -297,7 +358,10 @@ export function normalizeAnalysis(raw: unknown, set: QuestionSet): Analysis {
 		},
 		icp: { score, verdict: verdictFor(score), reasons: strList(icp.reasons) },
 		answers,
-		summary: str(r.summary)
+		summary: str(r.summary),
+		followUps: strList(r.followUps)
+			.filter((q) => q.length <= 160)
+			.slice(0, 3)
 	};
 }
 

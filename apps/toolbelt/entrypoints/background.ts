@@ -13,6 +13,8 @@ import {
 	type MemoryResponse,
 	type Settings
 } from '@toolbelt/core';
+import { askAgent, chatKey } from '@toolbelt/tool-agent/handoff';
+import { TOGGLE_COMMAND, toggleForUrl } from '@toolbelt/tool-grayscale/actions';
 import { createAccountService, neonSql } from '@toolbelt/db';
 import { createMemoryService } from '@toolbelt/memory';
 import { localArea } from '@toolbelt/ui/storage';
@@ -45,6 +47,29 @@ function openPanelOnToolbarClick() {
 	if (!sidebar) return;
 	browser.action.onClicked.addListener(() => {
 		sidebar.toggle().catch(warn('opening the sidebar'));
+	});
+}
+
+type Sidebar = { sidebarAction?: { open(): Promise<void>; toggle(): Promise<void> } };
+
+/** Opens the side panel. Call it straight from a user gesture (a menu click), before any await. */
+function openPanel(windowId: number | undefined) {
+	if (browser.sidePanel?.open) {
+		if (windowId !== undefined) browser.sidePanel.open({ windowId }).catch(warn('opening the side panel'));
+		return;
+	}
+	(browser as unknown as Sidebar).sidebarAction?.open().catch(warn('opening the sidebar'));
+}
+
+// "Ask Toolbelt about '<selection>'" in the right-click menu, while the agent is switched on.
+const ASK_MENU = 'tb:ask-agent';
+function syncMenu(s?: Settings) {
+	const menus = browser.contextMenus;
+	if (!menus) return Promise.resolve();
+	return (s ? Promise.resolve(s) : settings.get()).then(async (current) => {
+		await menus.removeAll();
+		if (!enabledToolIds(current).includes('agent')) return;
+		menus.create({ id: ASK_MENU, title: 'Ask Toolbelt about “%s”', contexts: ['selection'] });
 	});
 }
 
@@ -110,6 +135,35 @@ export default defineBackground(() => {
 	}
 	settings.subscribe((s) => {
 		syncScripts(s).catch(warn('registering tool scripts'));
+		syncMenu(s).catch(warn('updating the right-click menu'));
+	});
+	syncMenu().catch(warn('adding the right-click menu'));
+
+	browser.contextMenus?.onClicked.addListener((info, tab) => {
+		if (info.menuItemId !== ASK_MENU) return;
+		// First, while the click still counts as a user gesture: the browser opens the panel only then.
+		openPanel(tab?.windowId);
+		askAgent({ text: '', context: info.selectionText ?? '', send: false }).catch(
+			warn('handing the selection to the agent')
+		);
+	});
+
+	// The keyboard shortcut (manifest command) that toggles black and white for the site in the active tab.
+	browser.commands?.onCommand.addListener((command, tab) => {
+		if (command !== TOGGLE_COMMAND) return;
+		settings
+			.get()
+			.then(async (s) => {
+				if (!enabledToolIds(s).includes('grayscale')) return;
+				const url = tab?.url ?? (await browser.tabs.query({ active: true, currentWindow: true }))[0]?.url;
+				await toggleForUrl(url);
+			})
+			.catch(warn('toggling black and white'));
+	});
+
+	// Each tab's agent conversation lives in storage.session; it goes when the tab does.
+	browser.tabs.onRemoved.addListener((tabId) => {
+		browser.storage.session.remove(chatKey(tabId)).catch(warn('removing a closed tab’s chat'));
 	});
 
 	// Memories are only for Toolbelt's own pages (side panel, dashboard), never for scripts running in a website.

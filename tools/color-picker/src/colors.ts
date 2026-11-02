@@ -80,3 +80,48 @@ export function wcagLevel(ratio: number): 'AAA' | 'AA' | 'Large text only' | 'Fa
 export function addToHistory<T extends string>(history: T[], hex: T, limit = 24): T[] {
 	return [hex, ...history.filter((h) => h !== hex)].slice(0, limit);
 }
+
+/** WCAG 2 thresholds: normal text needs 4.5 (AA) / 7 (AAA); large text (18pt, or 14pt bold) 3 / 4.5. */
+export function contrastGrades(ratio: number) {
+	return {
+		normalAA: ratio >= 4.5,
+		normalAAA: ratio >= 7,
+		largeAA: ratio >= 3,
+		largeAAA: ratio >= 4.5
+	};
+}
+
+const distance = (a: Hex, b: Hex) => {
+	const x = toRgb(a);
+	const y = toRgb(b);
+	return Math.hypot(x.r - y.r, x.g - y.g, x.b - y.b);
+};
+
+export interface PaletteColor {
+	hex: Hex;
+	/** Share of the page's colour weight, 0 to 1. */
+	share: number;
+}
+
+/**
+ * The page's main colours from weighted samples (hex, weight): near-identical shades are merged into the heavier
+ * one, so eight swatches show eight different colours.
+ */
+export function rankColors(samples: [string, number][], limit = 8, minDistance = 28): PaletteColor[] {
+	const weights = new Map<Hex, number>();
+	for (const [raw, weight] of samples) {
+		const hex = normalizeHex(raw);
+		if (hex && Number.isFinite(weight) && weight > 0) weights.set(hex, (weights.get(hex) ?? 0) + weight);
+	}
+	const total = [...weights.values()].reduce((a, b) => a + b, 0);
+	const picked: { hex: Hex; weight: number }[] = [];
+	for (const [hex, weight] of [...weights].sort((a, b) => b[1] - a[1])) {
+		const near = picked.find((p) => distance(p.hex, hex) < minDistance);
+		if (near) near.weight += weight;
+		else picked.push({ hex, weight });
+	}
+	return picked
+		.sort((a, b) => b.weight - a.weight)
+		.slice(0, limit)
+		.map((p) => ({ hex: p.hex, share: total ? p.weight / total : 0 }));
+}

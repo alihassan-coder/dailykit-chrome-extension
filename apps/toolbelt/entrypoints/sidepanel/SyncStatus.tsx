@@ -1,6 +1,6 @@
-// The 24 px line at the bottom: is my data synced, how many tools are on, and the two keys worth knowing.
+// The sync state in the dock bar: is my data synced, and when.
 import { appError, timeAgo, type AccountState } from '@toolbelt/core';
-import { Kbd, KbdGroup, StatusDot, Tooltip } from '@toolbelt/ui';
+import { StatusDot, Tooltip, cn } from '@toolbelt/ui';
 import { useEffect, useState } from 'react';
 import { openDashboard } from '../../shell/commands.ts';
 
@@ -30,35 +30,24 @@ function syncNote(account: AccountState | null, now: number): SyncNote {
 	return { tone: 'ok', text: `Synced ${timeAgo(account.lastSync, now)}`, detail: 'Your data is encrypted and synced.' };
 }
 
-export function StatusBar({ account, toolsOn }: { account: AccountState | null; toolsOn: number }) {
+/** Is my data synced: a dot and a short label (hidden on very narrow panels); the full sentence is in the tooltip. */
+export function SyncStatus({ account, className }: { account: AccountState | null; className?: string }) {
 	const now = useMinuteClock();
 	const sync = syncNote(account, now);
 	return (
-		<footer className="@container flex h-6 shrink-0 items-center gap-2 border-t border-line bg-surface px-1.5 text-xs text-faint">
-			<Tooltip label={sync.detail} side="top">
-				<button
-					type="button"
-					onClick={() => openDashboard('data')}
-					className="flex h-5 min-w-0 items-center gap-1.5 rounded-sm px-1.5 transition-colors duration-100 hover:bg-hover hover:text-ink"
-				>
-					<StatusDot tone={sync.tone} />
-					<span className="tb-num truncate">{sync.text}</span>
-				</button>
-			</Tooltip>
-			<span aria-hidden="true">·</span>
-			<span className="tb-num shrink-0 truncate">
-				{toolsOn} {toolsOn === 1 ? 'tool' : 'tools'} on
-			</span>
-			<div className="ml-auto hidden shrink-0 items-center gap-3 pr-1.5 @[320px]:flex">
-				<span className="flex items-center gap-1">
-					<KbdGroup keys={['Mod', 'K']} />
-					Search
-				</span>
-				<span className="flex items-center gap-1">
-					<Kbd>[</Kbd>
-					Toolbar
-				</span>
-			</div>
-		</footer>
+		<Tooltip label={`${sync.text}. ${sync.detail}`} side="top">
+			<button
+				type="button"
+				aria-label={`${sync.text}. ${sync.detail}`}
+				onClick={() => openDashboard('data')}
+				className={cn(
+					'flex h-7 min-w-0 items-center gap-1.5 rounded-md px-2 text-xs text-faint transition-colors duration-100 hover:bg-hover hover:text-ink',
+					className
+				)}
+			>
+				<StatusDot tone={sync.tone} />
+				<span className="tb-num hidden min-w-0 truncate @[300px]:inline">{sync.text}</span>
+			</button>
+		</Tooltip>
 	);
 }

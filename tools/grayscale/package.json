@@ -7,7 +7,8 @@
 		".": "./src/index.ts",
 		"./panel": "./src/panel.tsx",
 		"./entries/*": "./src/entries/*",
-		"./icon": "./src/icon.tsx"
+		"./icon": "./src/icon.tsx",
+		"./actions": "./src/actions.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc -p ."

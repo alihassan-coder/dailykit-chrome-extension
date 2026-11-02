@@ -1,12 +1,6 @@
 // Small fetch-based embedders and LLMs in the shape mem0 expects. mem0's built-in providers construct the
 // OpenAI/Anthropic SDKs, which refuse to run in Firefox's background page; plain fetch works everywhere.
-import {
-	CLAUDE_CODE_SYSTEM,
-	anthropicAuthHeaders,
-	isClaudeSetupToken,
-	type ApiKeys,
-	type ProviderId
-} from '@toolbelt/core';
+import { anthropicAuthHeaders, isClaudeSetupToken, type ApiKeys, type ProviderId } from '@toolbelt/core';
 import type { Embedder, LLM, LLMResponse, Message } from 'mem0ai/oss';
 
 /** Each answer must arrive well inside the 30 s a service worker may wait on one fetch. */
@@ -30,7 +24,7 @@ const EMBEDDERS = {
 	gemini: { model: 'gemini-embedding-001', dims: 768 }
 } as const;
 
-/** OpenAI first, then Gemini. Anthropic and xAI offer no embedding API, so without one of these memory is off. */
+/** OpenAI first, then Gemini. Anthropic, xAI and Groq offer no embedding API, so without one of these memory is off. */
 export function chooseEmbedder(keys: ApiKeys): EmbedderChoice | null {
 	const provider = keys.openai ? 'openai' : keys.gemini ? 'gemini' : null;
 	if (!provider) return null;
@@ -49,7 +43,8 @@ const CHEAP: Record<ProviderId, { prefer: RegExp[]; fallback: string }> = {
 		prefer: [/^gemini-flash-lite-latest$/, /^gemini-[\d.]+-flash-lite$/, /^gemini-[\d.]+-flash$/],
 		fallback: 'gemini-flash-lite-latest'
 	},
-	xai: { prefer: [/fast-non-reasoning/, /mini/], fallback: 'grok-4-fast-non-reasoning' }
+	xai: { prefer: [/fast-non-reasoning/, /mini/], fallback: 'grok-4-fast-non-reasoning' },
+	groq: { prefer: [/^openai\/gpt-oss-20b$/, /^llama-[\d.]+-8b-instant$/], fallback: 'openai/gpt-oss-20b' }
 };
 
 const version = (id: string) => Number(id.match(/\d+(?:\.\d+)?/)?.[0] ?? 0);
@@ -88,12 +83,7 @@ async function post(fetchFn: Fetch, url: string, headers: Record<string, string>
 		signal: AbortSignal.timeout(TIMEOUT_MS)
 	});
 	if (!res.ok) {
-		const detail =
-			res.status === 401 || res.status === 403
-				? headers.Authorization?.startsWith('Bearer sk-ant-oat01-')
-					? 'the Claude setup token was rejected; run claude setup-token again and replace it in AI providers'
-					: 'the API key was rejected'
-				: `status ${res.status}`;
+		const detail = res.status === 401 || res.status === 403 ? 'the API key was rejected' : `status ${res.status}`;
 		throw new Error(`The AI provider answered with ${detail}.`);
 	}
 	return res.json();
@@ -139,6 +129,13 @@ export function createEmbedder(choice: EmbedderChoice, apiKey: string, fetchFn: 
 	};
 }
 
+/** Providers that speak OpenAI's chat completions API (Groq at its /openai path). */
+const OPENAI_COMPATIBLE = {
+	openai: 'https://api.openai.com/v1',
+	xai: 'https://api.x.ai/v1',
+	groq: 'https://api.groq.com/openai/v1'
+} as const;
+
 const asText = (content: Message['content']) => (typeof content === 'string' ? content : JSON.stringify(content));
 
 export function createLlm(choice: ExtractorChoice, apiKey: string, fetchFn: Fetch = fetch): LLM {
@@ -149,8 +146,8 @@ export function createLlm(choice: ExtractorChoice, apiKey: string, fetchFn: Fetc
 			.join('\n\n');
 		const turns = messages.filter((m) => m.role !== 'system');
 
-		if (choice.provider === 'openai' || choice.provider === 'xai') {
-			const base = choice.provider === 'openai' ? 'https://api.openai.com/v1' : 'https://api.x.ai/v1';
+		if (choice.provider === 'openai' || choice.provider === 'xai' || choice.provider === 'groq') {
+			const base = OPENAI_COMPATIBLE[choice.provider];
 			const body = (await post(
 				fetchFn,
 				`${base}/chat/completions`,
@@ -165,17 +162,15 @@ export function createLlm(choice: ExtractorChoice, apiKey: string, fetchFn: Fetc
 		}
 
 		if (choice.provider === 'anthropic') {
+			if (isClaudeSetupToken(apiKey))
+				throw new Error(
+					'Claude subscription tokens only work in Anthropic’s apps. Add an Anthropic API key in AI providers.'
+				);
 			// No JSON mode; mem0 pulls the JSON out of the reply (fenced or not).
 			const body = (await post(fetchFn, 'https://api.anthropic.com/v1/messages', anthropicAuthHeaders(apiKey), {
 				model: choice.model,
 				max_tokens: 2048,
-				...(isClaudeSetupToken(apiKey)
-					? {
-							system: [{ type: 'text', text: CLAUDE_CODE_SYSTEM }, ...(system ? [{ type: 'text', text: system }] : [])]
-						}
-					: system
-						? { system }
-						: {}),
+				...(system ? { system } : {}),
 				messages: turns.map((m) => ({
 					role: m.role === 'assistant' ? 'assistant' : 'user',
 					content: asText(m.content)

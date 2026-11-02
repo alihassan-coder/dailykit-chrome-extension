@@ -1,8 +1,9 @@
-// Toolbelt's full-colour logo is the generated raster master; every other mark (and Toolbelt's mono glyph) is
-// vector artwork from brand-marks.json, drawn on the shared ToolTile.
-import toolbeltImage from './assets/toolbelt-generated-v1-ui.png';
+// Every tool's brand mark is vector artwork from brand-marks.json, drawn on the shared ToolTile. Toolbelt's own
+// mark ("Buckle-T", docs/design/logo/README.md) has a dedicated drawing in ToolbeltMark: it needs a buckle slit,
+// chrome and a sheen that ToolTile does not draw.
 import marks from './brand-marks.json';
 import { ToolTile } from './ToolTile.tsx';
+import { ToolbeltMark } from './ToolbeltMark.tsx';
 
 export type BrandMark = keyof typeof marks;
 
@@ -12,18 +13,7 @@ type MarkPath = { d: string; stroke?: string; fill?: string; strokeWidth?: numbe
 const monoPaint = (paint: string | undefined) => (paint && paint !== 'none' ? 'currentColor' : paint);
 
 export function BrandIcon({ mark, size = 20, mono }: { mark: BrandMark; size?: number; mono?: boolean }) {
-	if (mark === 'toolbelt' && !mono) {
-		return (
-			<img
-				src={toolbeltImage}
-				width={size}
-				height={size}
-				alt=""
-				aria-hidden="true"
-				className="shrink-0 object-contain"
-			/>
-		);
-	}
+	if (mark === 'toolbelt') return <ToolbeltMark size={size} mono={mono} />;
 	const art = marks[mark];
 	return (
 		<ToolTile size={size} from={art.from} to={art.to} mono={mono}>

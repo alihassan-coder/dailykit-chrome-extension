@@ -11,17 +11,25 @@ export const PROVIDERS = [
 	},
 	{ id: 'openai', name: 'OpenAI', product: 'GPT', keyHint: 'sk-', consoleUrl: 'https://platform.openai.com/api-keys' },
 	{ id: 'xai', name: 'xAI', product: 'Grok', keyHint: 'xai-', consoleUrl: 'https://console.x.ai' },
-	{ id: 'gemini', name: 'Google', product: 'Gemini', keyHint: 'AIza', consoleUrl: 'https://aistudio.google.com/apikey' }
+	{
+		id: 'gemini',
+		name: 'Google',
+		product: 'Gemini',
+		keyHint: 'AIza',
+		consoleUrl: 'https://aistudio.google.com/apikey'
+	},
+	{ id: 'groq', name: 'Groq', product: 'GroqCloud', keyHint: 'gsk_', consoleUrl: 'https://console.groq.com/keys' }
 ] as const;
 
 export type ProviderId = (typeof PROVIDERS)[number]['id'];
 export type ApiKeys = Partial<Record<ProviderId, string>>;
 
-/** Setup tokens share the existing credential slot; old API-key settings need no migration. */
-export const isClaudeSetupToken = (value: string): boolean => value.trim().startsWith('sk-ant-oat01-');
-
-export const looksLikeClaudeSetupToken = (value: string): boolean =>
-	/^sk-ant-oat01-[A-Za-z0-9_-]+$/.test(value.trim()) && value.trim().length >= 80;
+/**
+ * A Claude subscription token from `claude setup-token` (sk-ant-oat01-…). Anthropic only accepts these in its own
+ * apps, so Toolbelt refuses them with a clear message instead of sending them. Kept to recognise one that was
+ * pasted, or saved by an older version, and explain how to switch to an API key.
+ */
+export const isClaudeSetupToken = (value: string): boolean => value.trim().startsWith('sk-ant-oat');
 
 const IDS = PROVIDERS.map((p) => p.id) as readonly string[];
 

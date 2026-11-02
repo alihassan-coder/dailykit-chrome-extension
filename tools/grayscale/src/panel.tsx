@@ -1,12 +1,19 @@
-// Black-and-white controls in the side panel: on/off, strength, and the sites kept in colour.
-import { toolValue } from '@toolbelt/core';
-import { Card, IconButton, Section, Switch, cn, localArea, showError } from '@toolbelt/ui';
+// Black-and-white controls in the side panel: on/off, strength, the sites kept in colour, a schedule and the
+// keyboard shortcut.
+import { Button, Card, IconButton, KbdGroup, Section, Switch, cn, inputClass, showError } from '@toolbelt/ui';
 import { Globe, X } from 'lucide-react';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { browser } from 'wxt/browser';
-import { STATE_KEY, appliesTo, hostOf, resolveState, toggleSkip, type GrayscaleState } from './grayscale.ts';
-
-const store = toolValue(localArea, 'grayscale', STATE_KEY, resolveState);
+import { TOGGLE_COMMAND, grayscaleState as store } from './actions.ts';
+import {
+	appliesTo,
+	hostOf,
+	inSchedule,
+	resolveState,
+	toggleSkip,
+	type GrayscaleState,
+	type Schedule
+} from './grayscale.ts';
 
 const MIN = 10;
 const MAX = 100;
@@ -74,10 +81,99 @@ function StrengthSlider({
 	);
 }
 
-function statusText(state: GrayscaleState): { main: string; meta?: string } {
-	if (!state.on) return { main: 'Off' };
-	const kept = state.skip.length;
-	return { main: 'On for every site', meta: kept ? `${kept} kept in colour` : undefined };
+function statusText(state: GrayscaleState, now: Date): { main: string; meta?: string } {
+	const kept = state.skip.length ? `${state.skip.length} kept in colour` : undefined;
+	if (state.on) return { main: 'On for every site', meta: kept };
+	if (inSchedule(state.schedule, now))
+		return { main: 'On by schedule', meta: [`until ${state.schedule.to}`, kept].filter(Boolean).join(' · ') };
+	return { main: 'Off', meta: state.schedule.on ? `on at ${state.schedule.from}` : undefined };
+}
+
+/** The time now, refreshed every half minute, so "On by schedule" follows the clock. */
+function useNow() {
+	const [now, setNow] = useState(() => new Date());
+	useEffect(() => {
+		const timer = setInterval(() => setNow(new Date()), 30_000);
+		return () => clearInterval(timer);
+	}, []);
+	return now;
+}
+
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** A 24-hour time field; only complete times are saved. */
+function TimeField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+	return (
+		<input
+			type="time"
+			aria-label={label}
+			value={value}
+			onChange={(e) => TIME.test(e.target.value) && onChange(e.target.value)}
+			className={cn(inputClass, 'tb-num h-7 w-28 px-2 text-sm')}
+		/>
+	);
+}
+
+function ScheduleRows({ schedule, onChange }: { schedule: Schedule; onChange: (s: Schedule) => void }) {
+	return (
+		<>
+			<div className="flex h-8 min-w-0 items-center gap-2 pr-2.5 pl-3">
+				<span className="w-16 shrink-0 text-sm text-muted">Schedule</span>
+				<span className="min-w-0 flex-1 truncate text-sm text-faint">
+					{schedule.on ? 'Every day, between these times' : 'On automatically at night, or any hours you pick'}
+				</span>
+				<Switch
+					size="sm"
+					label="Turn on automatically between two times"
+					checked={schedule.on}
+					onChange={(on) => onChange({ ...schedule, on })}
+				/>
+			</div>
+			{schedule.on && (
+				<div className="flex h-9 min-w-0 items-center gap-2 pr-2.5 pl-3">
+					<span className="w-16 shrink-0" aria-hidden="true" />
+					<TimeField label="From" value={schedule.from} onChange={(from) => onChange({ ...schedule, from })} />
+					<span className="text-sm text-faint">to</span>
+					<TimeField label="To" value={schedule.to} onChange={(to) => onChange({ ...schedule, to })} />
+				</div>
+			)}
+		</>
+	);
+}
+
+const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+
+/** The keyboard shortcut set for "toggle this site" (people can change it in the browser), and where to change it. */
+function ShortcutRow() {
+	const [keys, setKeys] = useState<string[] | null>(null);
+	useEffect(() => {
+		const commands = (browser as { commands?: typeof browser.commands }).commands;
+		if (!commands?.getAll) return;
+		Promise.resolve()
+			.then(() => commands.getAll())
+			.then((all) => {
+				const shortcut = all.find((c) => c.name === TOGGLE_COMMAND)?.shortcut ?? '';
+				setKeys(shortcut ? shortcut.split('+').filter(Boolean) : []);
+			})
+			.catch((error: unknown) => void showError(error));
+	}, []);
+	if (keys === null) return null;
+	const change = () =>
+		browser.tabs
+			.create({ url: isFirefox ? 'about:addons' : 'chrome://extensions/shortcuts' })
+			.catch((error: unknown) => void showError(error));
+	return (
+		<div className="flex h-8 min-w-0 items-center gap-2 pr-1.5 pl-3">
+			<span className="w-16 shrink-0 text-sm text-muted">Shortcut</span>
+			<span className="min-w-0 flex-1 truncate text-sm text-faint">
+				{keys.length ? <KbdGroup keys={keys} /> : 'Not set'}
+				<span className="sr-only"> toggles black and white for the site you are on</span>
+			</span>
+			<Button size="xs" variant="quiet" onClick={() => void change()}>
+				Change
+			</Button>
+		</div>
+	);
 }
 
 export default function GrayscalePanel() {
@@ -86,6 +182,7 @@ export default function GrayscalePanel() {
 	// Sites switched back to black and white in this visit stay listed, so a slip is one click to undo.
 	const [released, setReleased] = useState<string[]>([]);
 	const host = useCurrentSite();
+	const now = useNow();
 
 	useEffect(() => {
 		store.get().then(setState, (err: unknown) => {
@@ -99,7 +196,7 @@ export default function GrayscalePanel() {
 	const change = (fn: (s: GrayscaleState) => GrayscaleState) =>
 		void store.update(fn).catch((err: unknown) => showError(err));
 	const skipped = host ? !appliesTo({ ...state, on: true, strength: 100 }, host) : false;
-	const status = statusText(state);
+	const status = statusText(state, now);
 	const rows = [...state.skip, ...released.filter((s) => !state.skip.includes(s))];
 
 	const setKept = (site: string, keep: boolean) => {
@@ -149,6 +246,9 @@ export default function GrayscalePanel() {
 						onChange={(keep) => host && setKept(host, keep)}
 					/>
 				</div>
+
+				<ScheduleRows schedule={state.schedule} onChange={(schedule) => change((s) => ({ ...s, schedule }))} />
+				<ShortcutRow />
 			</Card>
 
 			<Section title="Kept in colour" count={state.skip.length || undefined}>

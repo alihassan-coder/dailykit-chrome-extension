@@ -1,9 +1,11 @@
-// One analysed profile: how well they match your ICP (once: a ring and a verdict badge), the answer to each
-// of your questions as a dense definition list (evidence folds out), and the facts the profile states.
-import { Badge, Card, Collapsible, CollapsibleContent, CollapsibleTrigger, Section, cn } from '@toolbelt/ui';
-import { ChevronRight } from 'lucide-react';
+// One analysed profile: who they are (a short summary and quick facts computed from the dates), how well they
+// match your ICP (once: a ring and a verdict badge), the answer to each of your questions as a dense definition
+// list with its confidence (quotes from the profile fold out; unsure answers say what's missing), and the facts.
+import { Badge, Card, Collapsible, CollapsibleContent, CollapsibleTrigger, Section, StatusDot, cn } from '@toolbelt/ui';
+import { Briefcase, Building2, ChevronRight, MapPin } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
-import type { Analysis, Answer, Field, QuestionSet, Verdict } from './fields.ts';
+import type { Analysis, Answer, Confidence, Field, QuestionSet, Verdict } from './fields.ts';
+import { formatMonths, type ComputedFacts } from './structured.ts';
 
 export const VERDICT: Record<
 	Verdict,
@@ -142,17 +144,42 @@ export function AnswerValue({ field, value }: { field: Field; value: unknown }) 
 	}
 }
 
-const CONFIDENCE_TONE = { high: 'ok', medium: 'warn', low: 'neutral' } as const;
+const CONFIDENCE: Record<Confidence, { label: string; dot: 'ok' | 'warn' | 'idle' }> = {
+	high: { label: 'High', dot: 'ok' },
+	medium: { label: 'Medium', dot: 'warn' },
+	low: { label: 'Low', dot: 'idle' }
+};
+
+/** "High", "Medium", "Low" with a dot: how sure the answer is. */
+function ConfidenceMark({ confidence }: { confidence: Confidence }) {
+	const c = CONFIDENCE[confidence] ?? CONFIDENCE.low;
+	return (
+		<span className="inline-flex shrink-0 items-center gap-1 text-xs text-faint">
+			<StatusDot tone={c.dot} />
+			{c.label}
+			<span className="sr-only"> confidence</span>
+		</span>
+	);
+}
 
 function AnswerRow({ field, answer }: { field: Field; answer?: Answer }) {
 	const evidence = answer?.evidence?.trim();
+	const quotes = answer?.quotes ?? [];
 	const label = <span className="min-w-0 wrap-anywhere">{field.label}</span>;
 	const value = (
-		<dd className="min-w-0 text-base text-ink">
-			<AnswerValue field={field} value={answer?.value} />
+		<dd className="grid min-w-0 gap-0.5 text-base text-ink">
+			<span className="flex min-w-0 items-baseline justify-between gap-2">
+				<span className="min-w-0">
+					<AnswerValue field={field} value={answer?.value} />
+				</span>
+				{answer && <ConfidenceMark confidence={answer.confidence} />}
+			</span>
+			{answer?.confidence === 'low' && answer.missing && (
+				<span className="text-sm text-faint">Missing: {answer.missing.replace(/^missing:\s*/i, '')}</span>
+			)}
 		</dd>
 	);
-	if (!evidence)
+	if (!evidence && !quotes.length)
 		return (
 			<div className="grid grid-cols-2 items-baseline gap-3 px-3 py-1.5">
 				<dt className="pl-5 text-sm text-muted">{label}</dt>
@@ -175,9 +202,13 @@ function AnswerRow({ field, answer }: { field: Field; answer?: Answer }) {
 				</dt>
 				{value}
 			</div>
-			<CollapsibleContent className="mt-1 ml-5 flex items-start gap-1.5 text-sm text-muted">
-				<Badge tone={CONFIDENCE_TONE[answer!.confidence] ?? 'neutral'}>{answer!.confidence} confidence</Badge>
-				<span className="min-w-0 wrap-anywhere">{evidence}</span>
+			<CollapsibleContent className="mt-1 ml-5 grid gap-1 text-sm text-muted">
+				{evidence && <p className="min-w-0 wrap-anywhere">{evidence}</p>}
+				{quotes.map((q) => (
+					<blockquote key={q} className="min-w-0 border-l-2 border-line pl-2 wrap-anywhere text-ink">
+						“{q}”
+					</blockquote>
+				))}
 			</CollapsibleContent>
 		</Collapsible>
 	);
@@ -192,15 +223,81 @@ function FactRow({ label, children }: { label: string; children: ReactNode }) {
 	);
 }
 
-export function Results({ set, analysis }: { set: QuestionSet; analysis: Analysis }) {
+/** The person at a glance: the model's two or three lines, then facts computed in code as badges. */
+function Summary({ analysis, facts }: { analysis: Analysis; facts?: ComputedFacts }) {
+	const months = facts?.experienceMonths ?? null;
+	const years = analysis.facts.yearsOfExperience;
+	const company = facts?.currentCompany ?? analysis.facts.currentCompany;
+	const location = facts?.location ?? analysis.facts.location;
+	const skills = (facts?.topSkills.length ? facts.topSkills : (analysis.facts.topSkills ?? [])).slice(0, 4);
+	const seniority = analysis.facts.seniority;
+	const icon = 'size-3';
+	return (
+		<div className="grid gap-2">
+			{analysis.summary && <p className="text-base leading-snug text-ink">{analysis.summary}</p>}
+			<ul aria-label="Quick facts" className="flex flex-wrap gap-1">
+				{(months !== null || (years !== null && years !== undefined)) && (
+					<li>
+						<Badge tone="outline">
+							<Briefcase className={icon} aria-hidden="true" />
+							<span className="tb-num">{months !== null ? formatMonths(months) : `~${years} yrs`}</span>
+							experience
+						</Badge>
+					</li>
+				)}
+				{seniority && (
+					<li>
+						<Badge tone="outline">{seniority.replace(/^./, (c) => c.toUpperCase())}</Badge>
+					</li>
+				)}
+				{company && (
+					<li>
+						<Badge tone="outline" className="max-w-48">
+							<Building2 className={icon} aria-hidden="true" />
+							<span className="truncate">{company}</span>
+						</Badge>
+					</li>
+				)}
+				{location && (
+					<li>
+						<Badge tone="outline" className="max-w-48">
+							<MapPin className={icon} aria-hidden="true" />
+							<span className="truncate">{location}</span>
+						</Badge>
+					</li>
+				)}
+				{skills.map((s) => (
+					<li key={s}>
+						<Badge tone="neutral" className="max-w-40">
+							<span className="truncate">{s}</span>
+						</Badge>
+					</li>
+				))}
+			</ul>
+		</div>
+	);
+}
+
+export function Results({
+	set,
+	analysis,
+	facts: computed
+}: {
+	set: QuestionSet;
+	analysis: Analysis;
+	/** Facts computed from the profile's dates; older snapshots have none. */
+	facts?: ComputedFacts;
+}) {
 	const { facts, icp } = analysis;
 	const verdict = VERDICT[icp.verdict] ?? VERDICT.no;
 	const answers = analysis.answers as Record<string, Answer | undefined>;
 	const now = [facts.currentRole, facts.currentCompany].filter(Boolean).join(' at ');
 	const experience = [
-		facts.yearsOfExperience !== null && facts.yearsOfExperience !== undefined
-			? `About ${facts.yearsOfExperience} years`
-			: '',
+		computed?.experienceMonths !== null && computed?.experienceMonths !== undefined
+			? formatMonths(computed.experienceMonths)
+			: facts.yearsOfExperience !== null && facts.yearsOfExperience !== undefined
+				? `About ${facts.yearsOfExperience} years`
+				: '',
 		facts.seniority ?? ''
 	]
 		.filter(Boolean)
@@ -220,15 +317,14 @@ export function Results({ set, analysis }: { set: QuestionSet; analysis: Analysi
 
 	return (
 		<div className="grid min-w-0 gap-3">
-			<Card className="grid gap-2">
+			<Card className="grid gap-2.5">
+				<Summary analysis={analysis} facts={computed} />
+				<div className="h-px bg-line" aria-hidden="true" />
 				<div className="flex items-center gap-3">
 					<ScoreRing score={icp.score} verdict={icp.verdict} />
-					<div className="grid min-w-0 flex-1 gap-0.5">
-						<div className="flex min-w-0 items-center gap-2">
-							<Badge tone={verdict.tone}>{verdict.label}</Badge>
-							<span className="truncate text-sm text-faint">for “{set.name}”</span>
-						</div>
-						{analysis.summary && <p className="text-sm text-muted">{analysis.summary}</p>}
+					<div className="flex min-w-0 flex-1 items-center gap-2">
+						<Badge tone={verdict.tone}>{verdict.label}</Badge>
+						<span className="truncate text-sm text-faint">for “{set.name}”</span>
 					</div>
 				</div>
 				{icp.reasons.length > 0 && (

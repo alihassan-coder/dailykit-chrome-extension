@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { addToHistory, contrastRatio, formats, normalizeHex, readableOn, wcagLevel } from '../src/colors.ts';
+import {
+	addToHistory,
+	contrastGrades,
+	contrastRatio,
+	formats,
+	normalizeHex,
+	rankColors,
+	readableOn,
+	wcagLevel
+} from '../src/colors.ts';
 
 describe('normalizeHex', () => {
 	it('accepts the usual ways people write a hex colour', () => {
@@ -56,5 +65,40 @@ describe('addToHistory', () => {
 		const long = Array.from({ length: 30 }, (_, i) => `#${String(i).padStart(6, '0')}`);
 		expect(addToHistory(long, '#abcdef', 24)).toHaveLength(24);
 		expect(addToHistory(long, '#abcdef', 24)[0]).toBe('#abcdef');
+	});
+});
+
+describe('contrastGrades', () => {
+	it('grades normal and large text against WCAG thresholds', () => {
+		expect(contrastGrades(7.1)).toEqual({ normalAA: true, normalAAA: true, largeAA: true, largeAAA: true });
+		expect(contrastGrades(4.6)).toEqual({ normalAA: true, normalAAA: false, largeAA: true, largeAAA: true });
+		expect(contrastGrades(3.2)).toEqual({ normalAA: false, normalAAA: false, largeAA: true, largeAAA: false });
+		expect(contrastGrades(2)).toEqual({ normalAA: false, normalAAA: false, largeAA: false, largeAAA: false });
+	});
+});
+
+describe('rankColors', () => {
+	it('orders by weight, merges near shades and keeps a limit', () => {
+		const ranked = rankColors([
+			['#ffffff', 50],
+			['#fefefe', 10],
+			['#2e55e6', 20],
+			['#111111', 15],
+			['not a colour', 99],
+			['#ff0000', 5]
+		]);
+		expect(ranked.map((c) => c.hex)).toEqual(['#ffffff', '#2e55e6', '#111111', '#ff0000']);
+		expect(ranked[0]!.share).toBeCloseTo(0.6);
+		expect(
+			rankColors(
+				[
+					['#000000', 1],
+					['#ff0000', 1],
+					['#00ff00', 1]
+				],
+				2
+			)
+		).toHaveLength(2);
+		expect(rankColors([])).toEqual([]);
 	});
 });

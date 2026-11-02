@@ -59,12 +59,21 @@ export type AgentEvent =
 	| { type: 'step'; id: string; tool: string; summary: string; status: StepStatus; detail?: string; ms?: number }
 	/** A new model turn started. */
 	| { type: 'progress'; step: number }
-	| { type: 'finished'; answer: string }
+	/** `usage`: tokens the whole run used, when the provider reports them. */
+	| { type: 'finished'; answer: string; usage?: RunUsage }
 	| { type: 'stopped'; reason: string };
+
+/** Tokens one run used, summed over its model calls. */
+export interface RunUsage {
+	input: number;
+	output: number;
+}
 
 export interface RunOptions {
 	model: LanguageModel;
 	task: string;
+	/** Text the user selected on the page and attached to the task; sent as untrusted page content. */
+	context?: string;
 	page: PageApi;
 	approve: (request: ApprovalRequest) => Promise<ApprovalAnswer>;
 	siteAllowed: (site: string) => Promise<boolean>;
@@ -221,6 +230,15 @@ export async function runAgent(opts: RunOptions): Promise<ModelMessage[]> {
 			role: 'user',
 			content: [
 				{ type: 'text', text: opts.task },
+				...(opts.context?.trim()
+					? [
+							{
+								type: 'text' as const,
+								text: `Text the user selected on the page:
+${wrap(opts.context.trim())}`
+							}
+						]
+					: []),
 				{ type: 'text', text: firstState }
 			]
 		}
@@ -232,8 +250,10 @@ export async function runAgent(opts: RunOptions): Promise<ModelMessage[]> {
 		content: systemPrompt({ nonce, today: opts.now ?? new Date() }) + memoryContext(notes),
 		...(cache ? { providerOptions: cache } : {})
 	};
+	const usage: RunUsage = { input: 0, output: 0 };
+	let counted = false;
 	const finish = (answer: string) => {
-		onEvent({ type: 'finished', answer });
+		onEvent({ type: 'finished', answer, ...(counted ? { usage: { ...usage } } : {}) });
 		if (answer.trim())
 			opts.remember?.([
 				{ role: 'user', content: opts.task },
@@ -289,6 +309,13 @@ export async function runAgent(opts: RunOptions): Promise<ModelMessage[]> {
 		try {
 			calls = await result.toolCalls;
 			messages.push(...(await result.response).messages);
+			// Usage is a nicety shown under the answer: a provider that does not report it changes nothing.
+			const u = await Promise.resolve(result.usage).catch(() => undefined);
+			if (u && (u.inputTokens !== undefined || u.outputTokens !== undefined)) {
+				usage.input += u.inputTokens ?? 0;
+				usage.output += u.outputTokens ?? 0;
+				counted = true;
+			}
 		} catch (error) {
 			if (opts.signal?.aborted) throw new AppFailure(appError('aborted', ctx));
 			throw new AppFailure(toAppError(error, ctx));

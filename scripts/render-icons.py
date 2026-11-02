@@ -2,11 +2,12 @@
 
 Run: python3 scripts/render-icons.py
 Requires the system librsvg and Cairo libraries (available with GTK on Linux).
-Toolbelt uses its generated PNG master; tool vectors live in packages/ui/src/brand-marks.json.
+Toolbelt's toolbar PNGs come from the hand-fitted "Buckle-T" masters in docs/design/logo/v2/buckle-t (one SVG per
+size; 48.svg is the 128 master cropped to a 1 px margin). Tool vectors live in packages/ui/src/brand-marks.json; its
+toolbelt entry is a flat-colour copy of the in-app mark drawn by packages/ui/src/ToolbeltMark.tsx.
 """
 import ctypes as c
 import ctypes.util
-import base64
 import html
 import json
 from pathlib import Path
@@ -15,12 +16,12 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 MARKS = json.loads((ROOT / 'packages/ui/src/brand-marks.json').read_text())
 SIZES = (16, 24, 32, 48, 128)
-GENERATED = ROOT / 'packages/ui/src/assets/toolbelt-generated-v1.png'
+LOGO = ROOT / 'docs/design/logo/v2/buckle-t'
 
 
-def generated_defs():
-    data = base64.b64encode(GENERATED.read_bytes()).decode()
-    return f'<defs><symbol id="generated-toolbelt" viewBox="0 0 20 20"><image width="20" height="20" href="data:image/png;base64,{data}"/></symbol></defs>'
+def toolbelt_master(size):
+    """The hand-fitted Toolbelt master for this toolbar size (the 128 file is the store/install icon)."""
+    return (LOGO / f'{size}.svg').read_text()
 
 
 def shapes(mark):
@@ -33,8 +34,6 @@ def shapes(mark):
 
 
 def tile(mark, prefix):
-    if mark == 'toolbelt':
-        return '<use href="#generated-toolbelt" width="20" height="20"/>'
     art = MARKS[mark]
     # Mirrors packages/ui/src/ToolTile.tsx: solid plate with a slight top-to-bottom step, round 1.6 strokes.
     return f'''<defs><linearGradient id="{prefix}" x1="0" y1="0" x2="0" y2="1">
@@ -45,8 +44,7 @@ def tile(mark, prefix):
 
 
 def svg(mark, size=128):
-    defs = generated_defs() if mark == 'toolbelt' else ''
-    return f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 20 20"><title>{html.escape(MARKS[mark]["name"])}</title>{defs}{tile(mark, mark)}</svg>'
+    return f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 20 20"><title>{html.escape(MARKS[mark]["name"])}</title>{tile(mark, mark)}</svg>'
 
 
 class Rectangle(c.Structure):
@@ -103,7 +101,6 @@ def preview():
     <text x="64" y="125" font-size="42" font-weight="bold" letter-spacing="-1.5" fill="#172A32">Good tools. A clear identity.</text>
     <text x="65" y="164" font-size="17" fill="#68716E">One family. Six distinct marks. Built for the details of everyday work.</text>
     <text x="1376" y="64" text-anchor="end" font-size="12" fill="#68716E">01 — PRECISION / UTILITY</text>''']
-    parts.append(generated_defs())
     for i, (mark, art) in enumerate(MARKS.items()):
         x, y = 64 + (i % 3) * 448, 210 + (i // 3) * 320
         parts.append(f'''<rect x="{x}" y="{y}" width="416" height="286" rx="18" fill="#FFFFFF" stroke="#E1E4DE"/>
@@ -120,8 +117,8 @@ def preview():
         <g transform="translate({x+279} {y+228}) scale(1.2)">{tile(mark, f'darklarge-{mark}')}</g>
         <text x="{x+320}" y="{y+246}" font-size="10" fill="#AFBBB8">DARK</text>''')
     parts.append('''<path d="M64 892h1312" stroke="#D9DFD7"/>
-    <text x="64" y="927" font-size="13" fill="#53635C">A folded ribbon for Toolbelt. Familiar symbols for the work.</text>
-    <text x="64" y="953" font-size="12" fill="#7D8881">Generated Toolbelt master · Existing tool artwork · Consistent app and toolbar assets</text>
+    <text x="64" y="927" font-size="13" fill="#53635C">A buckle for Toolbelt. Familiar symbols for the work.</text>
+    <text x="64" y="953" font-size="12" fill="#7D8881">Hand-fitted Toolbelt masters · Existing tool artwork · Consistent app and toolbar assets</text>
     <text x="1376" y="940" text-anchor="end" font-size="12" fill="#53635C">16 / 24 / 32 / 48 / 128 PX</text>
     </g></svg>''')
     return ''.join(parts)
@@ -131,10 +128,10 @@ def main():
     targets = {'toolbelt': ROOT / 'apps/toolbelt/public/icon', 'cairn': ROOT / 'apps/cairn/public/icon'}
     if len(sys.argv) > 1:
         targets = {'toolbelt': Path(sys.argv[1])}
-    render(svg('toolbelt', 256), 256, 256, GENERATED.with_name('toolbelt-generated-v1-ui.png'))
     for mark, folder in targets.items():
         for size in SIZES:
-            render(svg(mark, size), size, size, folder / f'{size}.png')
+            source = toolbelt_master(size) if mark == 'toolbelt' else svg(mark, size)
+            render(source, size, size, folder / f'{size}.png')
         print(f'Rendered {mark}: {", ".join(map(str, SIZES))} px')
     out = ROOT / 'docs/design/brand-refresh'
     out.mkdir(parents=True, exist_ok=True)

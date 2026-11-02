@@ -270,14 +270,14 @@ export function AppearanceSection() {
 						]}
 					/>
 				</SettingsRow>
-				<SettingsRow label="Side panel tools" hint="Show names next to tool logos.">
+				<SettingsRow label="Dock labels" hint="The tool dock at the bottom of the side panel.">
 					<Segmented<RailStyle>
-						label="Side panel tools"
+						label="Dock labels"
 						value={theme.rail}
 						onChange={(r) => change({ rail: r })}
 						options={[
-							{ value: 'icons', label: 'Logos' },
-							{ value: 'labels', label: 'Logos and names' }
+							{ value: 'icons', label: 'Icons only' },
+							{ value: 'labels', label: 'Show active name' }
 						]}
 					/>
 				</SettingsRow>

@@ -350,3 +350,27 @@ export function pageText(doc: Document, maxChars = 30_000): string {
 		.trim();
 	return text.length > maxChars ? `${text.slice(0, maxChars)}\n… (truncated)` : text;
 }
+
+/** Text-like inputs whose selected text may be read (never passwords, never hidden fields). */
+const SELECTABLE_INPUTS = new Set(['text', 'search', 'url', 'tel', '']);
+
+/** What the user has selected on the page (in the document or a text box), trimmed and capped; '' for none. */
+export function selectedText(doc: Document, maxChars = 8000): string {
+	const el = doc.activeElement;
+	let text = '';
+	if (el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && SELECTABLE_INPUTS.has(el.type))) {
+		try {
+			const start = el.selectionStart ?? 0;
+			const end = el.selectionEnd ?? 0;
+			text = end > start ? el.value.slice(start, end) : '';
+		} catch {
+			text = ''; // a field type without a text selection
+		}
+	}
+	if (!text) text = doc.getSelection?.()?.toString() ?? '';
+	text = text
+		.replace(/[ \t]+\n/g, '\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
+	return text.length > maxChars ? text.slice(0, maxChars) : text;
+}

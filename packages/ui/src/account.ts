@@ -13,7 +13,10 @@ export function useAccount() {
 
 	useEffect(() => {
 		let alive = true;
-		void requestAccount({ type: 'account:status' }).then((r) => alive && setAccount(r.account));
+		requestAccount({ type: 'account:status' })
+			.then((r) => alive && setAccount(r.account))
+			// The background was restarting or unreachable: the next published state (storage.session) still arrives.
+			.catch((e: unknown) => console.warn('Toolbelt: account status unavailable', e));
 		const onChange = (changes: Record<string, { newValue?: unknown }>, area: string) => {
 			if (area === 'session' && changes[ACCOUNT_STATE_KEY]?.newValue) {
 				setAccount(changes[ACCOUNT_STATE_KEY].newValue as AccountState);

@@ -2,6 +2,7 @@
 // (cached for a day, shared by all tools), and the model this tool last used. Each tool remembers its own
 // choice, so the agent can stay on a big model while Profile lens uses a quick one.
 import {
+	AppFailure,
 	appError,
 	isClaudeSetupToken,
 	resolveApiKeys,
@@ -55,6 +56,9 @@ export interface Models {
 export function choiceProblem(choice: ModelChoice | null, cache: ModelCache, keys: ApiKeys | null): AppError | null {
 	if (!choice || !keys) return null;
 	const key = keys[choice.provider];
+	// A saved Claude subscription token (older versions accepted one): say so up front, before any run fails.
+	if (choice.provider === 'anthropic' && key && isClaudeSetupToken(key))
+		return appError('subscription_token', { provider: 'Anthropic', setupToken: true });
 	const entry = cache[choice.provider];
 	if (!key || !entry || entry.key !== keyTag(key) || !entry.models.length) return null;
 	if (entry.models.some((m) => m.id === choice.model)) return null;
@@ -138,8 +142,7 @@ export function useModels(toolId: string): Models {
 				}
 			: {},
 		model() {
-			if (!choice || !keys)
-				throw new Error('Connect a Claude subscription or provider API key in the dashboard first.');
+			if (!choice || !keys) throw new AppFailure(appError('no_provider'));
 			return createModel(choice, keys);
 		}
 	};

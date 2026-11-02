@@ -22,7 +22,10 @@ beforeEach(() => {
 	fakeBrowser.reset();
 	delete window.EyeDropper;
 });
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	vi.restoreAllMocks();
+});
 
 describe('Colour picker panel', () => {
 	it('shows every format of the current colour, with copy buttons', async () => {
@@ -76,6 +79,75 @@ describe('Colour picker panel', () => {
 		expect(screen.getByText('--color: #2e55e6;')).toBeTruthy();
 		expect(screen.getByLabelText('White text: AA, 5.9 to 1')).toBeTruthy();
 		expect(screen.getByLabelText(/^Black text: /)).toBeTruthy();
+	});
+
+	it('checks contrast against a second colour, with AA and AAA for normal and large text', async () => {
+		renderPanel();
+		// White on the default blue: 5.90 passes AA for normal text but not AAA.
+		expect(await screen.findByLabelText('Contrast ratio 5.90 to 1')).toBeTruthy();
+		expect(screen.getByLabelText('Normal text AA: passes')).toBeTruthy();
+		expect(screen.getByLabelText('Normal text AAA: fails')).toBeTruthy();
+		expect(screen.getByLabelText('Large text AAA: passes')).toBeTruthy();
+		fireEvent.click(screen.getByRole('button', { name: 'Text #000000' }));
+		expect(await screen.findByLabelText('Contrast ratio 3.56 to 1')).toBeTruthy();
+		expect(screen.getByLabelText('Normal text AA: fails')).toBeTruthy();
+		expect(screen.getByLabelText('Large text AA: passes')).toBeTruthy();
+		fireEvent.click(screen.getByRole('button', { name: 'Swap text and background' }));
+		// Black is now the colour, the blue its text.
+		expect(await screen.findByText('rgb(0, 0, 0)')).toBeTruthy();
+		expect(screen.getByLabelText('Contrast ratio 3.56 to 1')).toBeTruthy();
+	});
+
+	it('reads the main colours of the page, to use or copy', async () => {
+		vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([{ id: 3, url: 'https://www.example.com/a' }] as never);
+		const execute = vi.fn(async () => [
+			{
+				result: [
+					['#ffffff', 80],
+					['#123456', 15],
+					['#ff8800', 5]
+				]
+			}
+		]);
+		Object.assign(fakeBrowser, { scripting: { executeScript: execute } });
+		const writeText = vi.fn().mockResolvedValue(undefined);
+		Object.assign(navigator, { clipboard: { writeText } });
+		renderPanel();
+		fireEvent.click(await screen.findByRole('button', { name: 'Get page palette' }));
+		expect(await screen.findByText('From example.com')).toBeTruthy();
+		expect(execute).toHaveBeenCalledWith(expect.objectContaining({ target: { tabId: 3 } }));
+		expect(screen.getByText('80%')).toBeTruthy();
+		fireEvent.click(screen.getByRole('button', { name: 'Copy #123456' }));
+		await waitFor(() => expect(writeText).toHaveBeenCalledWith('#123456'));
+		fireEvent.click(screen.getByRole('button', { name: 'Use #FF8800' }));
+		expect(await screen.findByText('rgb(255, 136, 0)')).toBeTruthy();
+	});
+
+	it('explains a page it cannot read, with the fix', async () => {
+		vi.spyOn(fakeBrowser.tabs, 'query').mockResolvedValue([{ id: 3, url: 'https://example.com/' }] as never);
+		Object.assign(fakeBrowser, {
+			scripting: {
+				executeScript: vi.fn(async () => {
+					throw new Error(
+						'Cannot access contents of url "https://example.com/". Extension manifest must request permission to access this host.'
+					);
+				})
+			}
+		});
+		renderPanel();
+		fireEvent.click(await screen.findByRole('button', { name: 'Get page palette' }));
+		expect(await screen.findByText('Toolbelt can’t read this site yet')).toBeTruthy();
+	});
+
+	it('opens the eyedropper when the side panel search asks for a pick', async () => {
+		window.EyeDropper = class {
+			open = async () => ({ sRGBHex: '#abcdef' });
+		};
+		const { requestPick } = await import('../src/handoff.ts');
+		await requestPick();
+		renderPanel();
+		expect(await screen.findByRole('button', { name: 'Use #ABCDEF' })).toBeTruthy();
+		expect((await fakeBrowser.storage.session.get('tb:color-picker:pick'))['tb:color-picker:pick']).toBeFalsy();
 	});
 
 	it('clears the history', async () => {

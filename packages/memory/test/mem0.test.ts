@@ -43,7 +43,8 @@ async function parts() {
 	};
 }
 
-describe('mem0ai', () => {
+// Loads the full mem0 SDK and a real Postgres (PGlite); slow when the whole suite runs in parallel.
+describe('mem0ai', { timeout: 90_000 }, () => {
 	it('is pinned to the exact version the factory patch was written against', () => {
 		const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8')) as {
 			dependencies: Record<string, string>;

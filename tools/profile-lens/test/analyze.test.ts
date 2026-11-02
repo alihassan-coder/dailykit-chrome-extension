@@ -1,7 +1,14 @@
 import { toAppError } from '@toolbelt/core';
 import { MockLanguageModelV4, convertArrayToReadableStream } from 'ai/test';
 import { describe, expect, it } from 'vitest';
-import { analyzeProfile, askAboutProfile, chatForRetry, readReply, type ChatMessage } from '../src/analyze.ts';
+import {
+	analyzeProfile,
+	askAboutProfile,
+	chatForRetry,
+	draftOutreach,
+	readReply,
+	type ChatMessage
+} from '../src/analyze.ts';
 import { DEFAULT_SETS, type Analysis } from '../src/fields.ts';
 import type { ProfileSnapshot } from '../src/profile.ts';
 
@@ -40,13 +47,25 @@ const analysis: Analysis = {
 	},
 	icp: { score: 82, verdict: 'strong', reasons: ['Founder of a B2B software company'] },
 	answers: {
-		'decision-maker': { value: true, evidence: 'Founder', confidence: 'high' },
-		seniority: { value: 9, evidence: 'Founder', confidence: 'high' },
-		'company-type': { value: 'SaaS', evidence: 'Sales software', confidence: 'medium' },
-		pains: { value: ['Pipeline'], evidence: 'About', confidence: 'low' },
-		opener: { value: 'Saw you build sales software at Acme.', evidence: 'About', confidence: 'medium' }
+		'decision-maker': { value: true, evidence: 'Founder', confidence: 'high', quotes: ['Founder at Acme.'] },
+		seniority: { value: 9, evidence: 'Founder', confidence: 'high', quotes: [] },
+		'company-type': {
+			value: 'SaaS',
+			evidence: 'Sales software',
+			confidence: 'medium',
+			quotes: ['I build sales software']
+		},
+		pains: {
+			value: ['Pipeline'],
+			evidence: 'About',
+			confidence: 'low',
+			quotes: [],
+			missing: 'No posts about their work'
+		},
+		opener: { value: 'Saw you build sales software at Acme.', evidence: 'About', confidence: 'medium', quotes: [] }
 	},
-	summary: 'Founder of Acme, a sales software company.'
+	summary: 'Founder of Acme, a sales software company.',
+	followUps: ['Who are their customers?', 'Are they hiring?', 'What did they build before Acme?']
 };
 
 const replying = (output: unknown) =>
@@ -70,6 +89,67 @@ describe('analyzeProfile', () => {
 		expect(prompt).toContain('[decision-maker] Can this person decide to buy?');
 		expect(prompt).toContain('75–100 fits nearly every point');
 		expect(prompt).toContain(set.icp);
+		expect(prompt).toContain('three follow-up questions');
+	});
+
+	it('keeps only quotes that are really on the profile, and asks for evidence before “high”', async () => {
+		const raw = {
+			...analysis,
+			answers: {
+				...analysis.answers,
+				'decision-maker': {
+					value: true,
+					evidence: '',
+					confidence: 'high',
+					quotes: ['“I build sales  software.”', 'Owns a 500-person company'],
+					missing: ''
+				},
+				seniority: { value: 9, evidence: '', confidence: 'high', quotes: ['Invented quote'], missing: '' }
+			}
+		};
+		const out = await analyzeProfile({ model: replying(raw), profile, set });
+		expect(out.answers['decision-maker']).toEqual({
+			value: true,
+			evidence: '',
+			confidence: 'high',
+			quotes: ['I build sales  software.']
+		});
+		// Nothing to stand on: not "high".
+		expect(out.answers.seniority).toMatchObject({ confidence: 'medium', quotes: [] });
+	});
+
+	it('does not fail when the model leaves out the extras', async () => {
+		const bare = {
+			...analysis,
+			followUps: undefined,
+			answers: { ...analysis.answers, pains: { value: [], evidence: '', confidence: 'low' } }
+		};
+		const out = await analyzeProfile({ model: replying(bare), profile, set });
+		expect(out.followUps).toEqual([]);
+		expect(out.answers.pains).toEqual({
+			value: [],
+			evidence: '',
+			confidence: 'low',
+			quotes: [],
+			missing: 'The profile doesn’t say.'
+		});
+	});
+
+	it('uses the experience computed from the dates over the model’s guess', async () => {
+		const withRoles: ProfileSnapshot = {
+			...profile,
+			structured: {
+				experience: [{ title: 'Founder', company: 'Acme', start: { year: 2020, month: 1 }, current: true }],
+				education: [],
+				skills: [],
+				certifications: [],
+				sources: { experience: 'embedded' }
+			}
+		};
+		const model = replying(analysis);
+		const out = await analyzeProfile({ model, profile: withRoles, set, now: new Date('2026-01-15') });
+		expect(out.facts.yearsOfExperience).toBe(6);
+		expect(JSON.stringify(model.doGenerateCalls[0]!.prompt)).toContain('Total experience (computed from the dates');
 	});
 
 	it('marks the profile with a random tag the profile text cannot close', async () => {
@@ -96,17 +176,33 @@ describe('analyzeProfile', () => {
 			answers: {
 				...analysis.answers,
 				seniority: { value: 7.5, evidence: 'Founder', confidence: 'High' },
-				'company-type': { value: 'saas', evidence: 'Sales software', confidence: 'certain' },
+				'company-type': {
+					value: 'saas',
+					evidence: 'Sales software',
+					confidence: 'certain',
+					quotes: ['I build sales software']
+				},
 				pains: { value: [], evidence: 'Nothing', confidence: 'medium' }
 			}
 		};
 		const out = await analyzeProfile({ model: replying(loose), profile, set });
 		expect(out.icp).toEqual({ score: 42, verdict: 'weak', reasons: ['Some fit'] });
 		expect(out.facts).toMatchObject({ seniority: 'founder', yearsOfExperience: 8 });
-		expect(out.answers.seniority).toEqual({ value: 8, evidence: 'Founder', confidence: 'high' });
-		expect(out.answers['company-type']).toEqual({ value: 'SaaS', evidence: 'Sales software', confidence: 'low' });
-		// No value: no evidence.
-		expect(out.answers.pains).toEqual({ value: [], evidence: '', confidence: 'low' });
+		expect(out.answers.seniority).toEqual({ value: 8, evidence: 'Founder', confidence: 'high', quotes: [] });
+		expect(out.answers['company-type']).toEqual({
+			value: 'SaaS',
+			evidence: 'Sales software',
+			confidence: 'low',
+			quotes: ['I build sales software']
+		});
+		// No value: no evidence, and it says what is missing.
+		expect(out.answers.pains).toEqual({
+			value: [],
+			evidence: '',
+			confidence: 'low',
+			quotes: [],
+			missing: 'The profile doesn’t say.'
+		});
 
 		const wild = {
 			...analysis,
@@ -118,7 +214,32 @@ describe('analyzeProfile', () => {
 		};
 		const out2 = await analyzeProfile({ model: replying(wild), profile, set });
 		expect(out2.answers.seniority!.value).toBe(10);
-		expect(out2.answers['company-type']).toEqual({ value: null, evidence: '', confidence: 'low' });
+		expect(out2.answers['company-type']).toEqual({
+			value: null,
+			evidence: '',
+			confidence: 'low',
+			quotes: [],
+			missing: 'The profile doesn’t say.'
+		});
+	});
+});
+
+describe('draftOutreach', () => {
+	it('writes one message from the profile and the set’s goal, only when asked', async () => {
+		// The model wraps it in quotes; they come off.
+		const model = replying('Hi Jane, saw you build sales software at Acme. Open to a quick chat?');
+		const text = await draftOutreach({ model, profile, set, analysis });
+		expect(text).toBe('Hi Jane, saw you build sales software at Acme. Open to a quick chat?');
+		const prompt = JSON.stringify(model.doGenerateCalls[0]!.prompt);
+		expect(prompt).toContain(set.icp);
+		expect(prompt).toContain('No flattery');
+		expect(prompt).toMatch(/<linkedin_profile_[a-z0-9]+>/);
+	});
+
+	it('says so when nothing comes back', async () => {
+		const model = replying('  ');
+		const err = await draftOutreach({ model, profile, set, analysis }).catch((e: unknown) => e);
+		expect(err).toMatchObject({ app: { code: 'bad_output', title: 'No message came back' } });
 	});
 });
 

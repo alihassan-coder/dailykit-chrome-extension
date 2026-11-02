@@ -1,20 +1,30 @@
 {
 	"toolbelt": {
 		"name": "Toolbelt",
-		"meaning": "One ribbon. Your everyday tools, connected.",
-		"from": "#5172F6",
-		"to": "#4467F5",
-		"accent": "#B8C5FB",
+		"meaning": "One buckle fastens every tool into one belt.",
+		"from": "#6A88FF",
+		"to": "#2E44CC",
+		"accent": "#FFC53D",
 		"paths": [
 			{
-				"d": "M8.5 4.5v8a3 3 0 0 0 3 3h2",
-				"stroke": "#FFFFFF",
-				"strokeWidth": 1.6
+				"d": "M7 8h6v12H7Z",
+				"fill": "#16225E",
+				"stroke": "none"
 			},
 			{
-				"d": "M6 8.5h7",
-				"stroke": "#B8C5FB",
-				"strokeWidth": 1.6
+				"d": "M4 2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2ZM5 5v1h10V5Z",
+				"fill": "#FFFFFF",
+				"stroke": "none"
+			},
+			{
+				"d": "M9 4a1 1 0 0 1 2 0v10H9Z",
+				"fill": "#FFFFFF",
+				"stroke": "none"
+			},
+			{
+				"d": "M9 14h2v2H9Z",
+				"fill": "#FFC53D",
+				"stroke": "none"
 			}
 		]
 	},
