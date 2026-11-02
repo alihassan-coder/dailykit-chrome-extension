@@ -36,11 +36,11 @@ def tile(mark, prefix):
     if mark == 'toolbelt':
         return '<use href="#generated-toolbelt" width="20" height="20"/>'
     art = MARKS[mark]
-    return f'''<defs><linearGradient id="{prefix}" x1="0" y1="0" x2="1" y2="1">
+    # Mirrors packages/ui/src/ToolTile.tsx: solid plate with a slight top-to-bottom step, round 1.6 strokes.
+    return f'''<defs><linearGradient id="{prefix}" x1="0" y1="0" x2="0" y2="1">
       <stop stop-color="{art['from']}"/><stop offset="1" stop-color="{art['to']}"/>
     </linearGradient></defs>
     <rect width="20" height="20" rx="5" fill="url(#{prefix})"/>
-    <rect x=".4" y=".4" width="19.2" height="19.2" rx="4.6" fill="none" stroke="white" stroke-opacity=".12" stroke-width=".6"/>
     <g stroke-linecap="round" stroke-linejoin="round">{shapes(mark)}</g>'''
 
 

@@ -1,4 +1,5 @@
-// Everything the command palette can do, built from the tools that are on and the dashboard sections.
+// Everything the side panel's search can do, built from the tools that are on and the dashboard sections.
+// Listed under three headings: Tools, Actions, Settings.
 import { enabledToolIds, setTheme, type Settings, type SettingsStore } from '@toolbelt/core';
 import type { Command } from '@toolbelt/ui';
 import { browser } from 'wxt/browser';
@@ -14,10 +15,23 @@ export const DASHBOARD_SECTIONS = [
 	{ id: 'about', title: 'About', keywords: ['version', 'licence', 'credits'] }
 ] as const;
 
-export const openDashboard = (section?: string) =>
-	void browser.tabs.create({ url: browser.runtime.getURL(`/options.html${section ? `#${section}` : ''}`) });
+export const COMMAND_GROUPS = { tools: 'Tools', actions: 'Actions', settings: 'Settings' } as const;
 
-export function buildCommands(settings: Settings, store: SettingsStore, openTool: (id: string) => void): Command[] {
+export const openDashboard = (section?: string) => {
+	browser.tabs
+		.create({ url: browser.runtime.getURL(`/options.html${section ? `#${section}` : ''}`) })
+		.catch((e: unknown) => console.warn('Toolbelt: could not open the dashboard', e));
+};
+
+/** What the commands do that only the side panel knows how to do. */
+export interface CommandActions {
+	openTool: (id: string) => void;
+	/** Wide panels save the choice; narrow ones open the toolbar over the content. */
+	toggleRail: () => void;
+	lock: () => void;
+}
+
+export function buildCommands(settings: Settings, store: SettingsStore, actions: CommandActions): Command[] {
 	const railOpen = settings.theme.rail === 'labels';
 	const toolCommands: Command[] = enabledToolIds(settings).flatMap((id) => {
 		const tool = tools.find((t) => t.id === id);
@@ -27,19 +41,11 @@ export function buildCommands(settings: Settings, store: SettingsStore, openTool
 				id: `tool:${id}`,
 				title: tool.name,
 				keywords: keywords[id],
-				hint: 'Tool',
-				run: () => openTool(id)
+				group: COMMAND_GROUPS.tools,
+				run: () => actions.openTool(id)
 			}
 		];
 	});
-
-	const sectionCommands: Command[] = DASHBOARD_SECTIONS.map((s) => ({
-		id: `settings:${s.id}`,
-		title: `${s.title} settings`,
-		keywords: [...s.keywords],
-		hint: 'Dashboard',
-		run: () => openDashboard(s.id)
-	}));
 
 	const mode = settings.theme.mode;
 	const themeCommands: Command[] = (['light', 'dark', 'system'] as const)
@@ -48,19 +54,47 @@ export function buildCommands(settings: Settings, store: SettingsStore, openTool
 			id: `theme:${m}`,
 			title: m === 'system' ? 'Follow system light and dark' : `Switch to ${m} mode`,
 			keywords: ['theme', 'appearance'],
-			hint: 'Theme',
-			run: () => void store.update((s) => setTheme(s, { mode: m }))
+			group: COMMAND_GROUPS.actions,
+			run: () => {
+				store
+					.update((s) => setTheme(s, { mode: m }))
+					.catch((e: unknown) => console.warn('Toolbelt: could not change the theme', e));
+			}
 		}));
 
-	const layoutCommands: Command[] = [
+	const actionCommands: Command[] = [
 		{
 			id: 'layout:rail',
 			title: railOpen ? 'Collapse the toolbar' : 'Open the toolbar',
 			keywords: ['sidebar', 'minimise', 'expand', 'names'],
 			hint: '[',
-			run: () => void store.update((s) => setTheme(s, { rail: railOpen ? 'icons' : 'labels' }))
+			group: COMMAND_GROUPS.actions,
+			run: actions.toggleRail
+		},
+		...themeCommands,
+		{
+			id: 'action:dashboard',
+			title: 'Open the dashboard',
+			keywords: ['settings', 'options', 'preferences'],
+			group: COMMAND_GROUPS.actions,
+			run: () => openDashboard()
+		},
+		{
+			id: 'action:lock',
+			title: 'Lock Toolbelt',
+			keywords: ['sign out', 'log out', 'password'],
+			group: COMMAND_GROUPS.actions,
+			run: actions.lock
 		}
 	];
 
-	return [...toolCommands, ...sectionCommands, ...themeCommands, ...layoutCommands];
+	const sectionCommands: Command[] = DASHBOARD_SECTIONS.map((s) => ({
+		id: `settings:${s.id}`,
+		title: `${s.title} settings`,
+		keywords: [...s.keywords],
+		group: COMMAND_GROUPS.settings,
+		run: () => openDashboard(s.id)
+	}));
+
+	return [...toolCommands, ...actionCommands, ...sectionCommands];
 }

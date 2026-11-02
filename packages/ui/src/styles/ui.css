@@ -2,8 +2,12 @@
    Tailwind's default palette and scales are cleared, so every class resolves to a Toolbelt token. */
 @import 'tailwindcss' source(none);
 @source '../';
+@source '../../../../packages';
 @source '../../../../tools';
 @source '../../../../apps';
+@source not '../../../../**/node_modules';
+@source not '../../../../**/.output';
+@source not '../../../../**/test';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
@@ -15,59 +19,80 @@
 @theme inline {
 	--spacing: calc(4px * var(--tb-density));
 
+	/* Surfaces, back to front: bg (the page), surface (cards, inputs), raised (menus, popovers, dialogs). */
 	--color-bg: var(--tb-bg);
 	--color-surface: var(--tb-surface);
+	--color-raised: var(--tb-raised);
+	/* Quiet fill: hovered rows, segmented tracks, code. */
 	--color-soft: var(--tb-soft);
+	--color-hover: var(--tb-hover);
 	--color-line: var(--tb-line);
+	--color-line-strong: var(--tb-line-strong);
+	/* Text: ink (primary), muted (secondary), faint (meta, placeholders). All pass 4.5:1 on surface. */
 	--color-ink: var(--tb-ink);
 	--color-muted: var(--tb-muted);
+	--color-faint: var(--tb-faint);
+	/* accent fills buttons and switches; accent-ink is the accent as readable text or an icon. */
 	--color-accent: var(--tb-accent);
+	--color-accent-ink: var(--tb-accent-ink);
 	--color-accent-soft: var(--tb-accent-soft);
 	--color-on-accent: var(--tb-on-accent);
 	--color-ok: var(--tb-ok);
 	--color-warn: var(--tb-warn);
 	--color-danger: var(--tb-danger);
+	--color-on-danger: var(--tb-on-danger);
 	--color-switch-off: var(--tb-switch-off);
+	--color-thumb: var(--tb-thumb);
+	--color-scrim: var(--tb-scrim);
+	--color-transparent: transparent;
+	--color-current: currentColor;
 
-	--font-ui: 'Schibsted Grotesk Variable', 'Schibsted Grotesk', 'Segoe UI', system-ui, sans-serif;
-	--font-read: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif;
-	--font-mono: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+	--font-ui: var(--tb-font);
+	--font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
 
+	--text-2xs: calc(10px * var(--tb-scale));
+	--text-2xs--line-height: 1.4;
 	--text-xs: calc(11px * var(--tb-scale));
-	--text-xs--line-height: 1.4;
+	--text-xs--line-height: 1.45;
 	--text-sm: calc(12px * var(--tb-scale));
-	--text-sm--line-height: 1.45;
+	--text-sm--line-height: 1.5;
 	--text-base: calc(13px * var(--tb-scale));
 	--text-base--line-height: 1.5;
 	--text-lg: calc(14px * var(--tb-scale));
-	--text-lg--line-height: 1.4;
+	--text-lg--line-height: 1.45;
 	--text-xl: calc(16px * var(--tb-scale));
-	--text-xl--line-height: 1.25;
+	--text-xl--line-height: 1.3;
 	--text-2xl: calc(20px * var(--tb-scale));
-	--text-2xl--line-height: 1.2;
+	--text-2xl--line-height: 1.25;
 
+	--leading-none: 1;
 	--leading-tight: 1.25;
 	--leading-snug: 1.4;
 	--leading-relaxed: 1.6;
-	--tracking-tight: -0.01em;
+	--tracking-tight: -0.011em;
 	--tracking-wide: 0.04em;
 
 	--font-weight-normal: 400;
 	--font-weight-medium: 500;
 	--font-weight-semibold: 600;
 
-	--radius-sm: max(2px, calc(var(--tb-radius) - 4px));
+	--radius-xs: max(2px, calc(var(--tb-radius) - 3px));
+	--radius-sm: max(2px, calc(var(--tb-radius) - 2px));
 	--radius-md: var(--tb-radius);
-	--radius-lg: calc(var(--tb-radius) + 4px);
-	--radius-xl: calc(var(--tb-radius) + 8px);
-	--radius-2xl: calc(var(--tb-radius) + 12px);
+	--radius-lg: calc(var(--tb-radius) + 2px);
+	--radius-xl: calc(var(--tb-radius) + 4px);
+	--radius-2xl: calc(var(--tb-radius) + 6px);
 	--radius-full: 9999px;
 
-	--shadow-float: 0 1px 3px rgb(0 0 0 / 0.12), 0 8px 24px -8px rgb(0 0 0 / 0.24);
-	--shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 1px rgb(0 0 0 / 0.02);
+	/* Elevation: menus and dialogs carry a hairline ring plus a soft shadow; cards are flat. */
+	--shadow-xs: 0 1px 1px rgb(0 0 0 / 0.04);
+	--shadow-card: var(--tb-shadow-card);
+	--shadow-float: var(--tb-shadow-float);
+	--shadow-dialog: var(--tb-shadow-dialog);
 
-	--animate-spin: spin 0.9s linear infinite;
+	--animate-spin: spin 0.8s linear infinite;
 	--animate-pulse: pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	--animate-shimmer: shimmer 1.4s ease-in-out infinite;
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);
@@ -78,79 +103,116 @@
 			opacity: 0.45;
 		}
 	}
+	@keyframes shimmer {
+		50% {
+			opacity: 0.55;
+		}
+	}
 
 	--ease-out: cubic-bezier(0.2, 0, 0, 1);
+	--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 	/* Side panel widths (container queries): regular, two columns, wide. */
+	--container-xs: 360px;
 	--container-sm: 400px;
 	--container-md: 520px;
 	--container-lg: 600px;
+	--container-xl: 760px;
+	--container-2xl: 960px;
 	--breakpoint-sm: 640px;
 	--breakpoint-md: 768px;
+	--breakpoint-lg: 1024px;
 	--default-transition-duration: 120ms;
 	--default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Default token values (light). The theme engine overwrites these on the root element at runtime. */
+/* Default token values (light). The theme engine overwrites accent, radius, density, scale and font at runtime. */
 :root,
 :host,
 [data-tb-root] {
 	--tb-density: 1;
 	--tb-scale: 1;
-	--tb-radius: 10px;
-	--tb-bg: #f8f9fa;
+	--tb-radius: 6px;
+	--tb-font: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--tb-bg: #f7f7f8;
 	--tb-surface: #ffffff;
-	--tb-soft: #f1f3f4;
-	--tb-line: #e3e5e8;
-	--tb-ink: #1f2328;
-	--tb-muted: #5f6368;
+	--tb-raised: #ffffff;
+	--tb-soft: #f1f1f3;
+	--tb-hover: rgb(15 15 25 / 0.045);
+	--tb-line: rgb(15 15 25 / 0.09);
+	--tb-line-strong: rgb(15 15 25 / 0.16);
+	--tb-ink: #18181b;
+	--tb-muted: #52525b;
+	--tb-faint: #6b6b76;
 	--tb-accent: #4467f5;
-	--tb-accent-soft: #e6ebfe;
+	--tb-accent-ink: #3959da;
+	--tb-accent-soft: #ecf0fe;
 	--tb-on-accent: #ffffff;
-	--tb-ok: #188038;
-	--tb-warn: #b06000;
-	--tb-danger: #c5221f;
-	--tb-switch-off: #a7adb4;
+	--tb-ok: #18794e;
+	--tb-warn: #a35200;
+	--tb-danger: #cd2b31;
+	--tb-on-danger: #ffffff;
+	--tb-switch-off: #d4d4d8;
+	--tb-thumb: #ffffff;
+	--tb-scrim: rgb(10 10 15 / 0.32);
+	--tb-shadow-card: 0 1px 2px rgb(15 15 25 / 0.04);
+	--tb-shadow-float:
+		0 0 0 1px rgb(15 15 25 / 0.08), 0 4px 12px -2px rgb(15 15 25 / 0.12), 0 12px 32px -8px rgb(15 15 25 / 0.14);
+	--tb-shadow-dialog: 0 0 0 1px rgb(15 15 25 / 0.08), 0 24px 64px -12px rgb(15 15 25 / 0.28);
 	color-scheme: light;
 }
 
+/* Dark is first-class: layered near-blacks (never pure #000), hairlines as white alpha. */
 [data-theme='dark'] {
-	--tb-bg: #1f1f1f;
-	--tb-surface: #282a2c;
-	--tb-soft: #333537;
-	--tb-line: #3c4043;
-	--tb-ink: #e3e3e3;
-	--tb-muted: #9aa0a6;
-	--tb-accent: #8ea3ff;
-	--tb-accent-soft: #2a3354;
-	--tb-on-accent: #0b1540;
-	--tb-ok: #6dd58c;
-	--tb-warn: #f9ab00;
-	--tb-danger: #f28b82;
-	--tb-switch-off: #5f6368;
+	--tb-bg: #0e0e10;
+	--tb-surface: #161618;
+	--tb-raised: #1c1c1f;
+	--tb-soft: #222225;
+	--tb-hover: rgb(255 255 255 / 0.05);
+	--tb-line: rgb(255 255 255 / 0.08);
+	--tb-line-strong: rgb(255 255 255 / 0.14);
+	--tb-ink: #ededef;
+	--tb-muted: #a1a1aa;
+	--tb-faint: #8b8b94;
+	--tb-accent: #4467f5;
+	--tb-accent-ink: #88a7fd;
+	--tb-accent-soft: #1b2340;
+	--tb-on-accent: #ffffff;
+	--tb-ok: #3dd68c;
+	--tb-warn: #f1a10d;
+	--tb-danger: #ff6369;
+	--tb-on-danger: #1a0506;
+	--tb-switch-off: #3f3f46;
+	--tb-thumb: #ffffff;
+	--tb-scrim: rgb(0 0 0 / 0.55);
+	--tb-shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+	--tb-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.08), 0 8px 24px -4px rgb(0 0 0 / 0.6);
+	--tb-shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.75);
 	color-scheme: dark;
 }
 
 /* Before settings load, follow the system so a dark panel never flashes white. */
 @media (prefers-color-scheme: dark) {
 	:root:not([data-theme]) {
-		--tb-bg: #1f1f1f;
-		--tb-surface: #282a2c;
-		--tb-soft: #333537;
-		--tb-line: #3c4043;
-		--tb-ink: #e3e3e3;
-		--tb-muted: #9aa0a6;
+		--tb-bg: #0e0e10;
+		--tb-surface: #161618;
+		--tb-raised: #1c1c1f;
+		--tb-line: rgb(255 255 255 / 0.08);
+		--tb-ink: #ededef;
+		--tb-muted: #a1a1aa;
 		color-scheme: dark;
 	}
 }
 
 [data-tb-root] {
-	font-family: var(--tb-font, system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif);
+	font-family: var(--tb-font);
 	font-size: var(--text-base);
+	line-height: 1.5;
 	color: var(--tb-ink);
+	font-feature-settings: 'cv11', 'ss01';
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	scrollbar-width: thin;
-	scrollbar-color: var(--tb-line) transparent;
+	scrollbar-color: var(--tb-line-strong) transparent;
 }
 
 /* Extension pages: Chrome's own page stylesheet sets body to 75% Noto Sans. Inherit the theme instead,
@@ -167,13 +229,22 @@ html[data-tb-root] body {
 	color: inherit;
 }
 
-/* One focus ring for every control. Inputs show it too, not just a border change. */
+[data-tb-root] ::selection {
+	background: var(--tb-accent-soft);
+}
+
+/* One focus ring for every control: 2px accent, offset so it never hides the border. */
 [data-tb-root] :focus-visible {
-	outline: 2px solid var(--tb-accent);
+	outline: 2px solid var(--tb-accent-ink);
 	outline-offset: 2px;
 }
-[data-tb-root] :is(input, textarea):focus-visible {
-	outline-offset: 0;
+[data-tb-root] :is(input, textarea, [cmdk-input]):focus-visible {
+	outline: none;
+}
+
+/* Tabular numbers wherever figures line up: counts, sizes, times. */
+.tb-num {
+	font-variant-numeric: tabular-nums;
 }
 
 /* Reduced motion, chosen in Appearance or asked for by the operating system. */
@@ -204,15 +275,56 @@ html[data-tb-root] body {
 	animation: tb-enter 120ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Popups (Select, menus) settle in from their side. */
-@keyframes tb-pop {
+/* Popups (menus, selects, popovers, tooltips) settle in from their side; dialogs scale in. Radix sets
+   data-state and data-side, so one rule covers every floating layer. */
+@keyframes tb-pop-in {
 	from {
 		opacity: 0;
-		transform: scale(0.98);
+		transform: translate(var(--tb-pop-x, 0), var(--tb-pop-y, 0)) scale(0.97);
 	}
 }
-.tb-pop {
-	animation: tb-pop 120ms cubic-bezier(0.2, 0, 0, 1);
+@keyframes tb-pop-out {
+	to {
+		opacity: 0;
+		transform: scale(0.97);
+	}
+}
+@keyframes tb-fade-in {
+	from {
+		opacity: 0;
+	}
+}
+@keyframes tb-fade-out {
+	to {
+		opacity: 0;
+	}
+}
+.tb-pop,
+.tb-pop[data-state='open'],
+.tb-pop[data-state='delayed-open'],
+.tb-pop[data-state='instant-open'] {
+	animation: tb-pop-in 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+.tb-pop[data-state='closed'] {
+	animation: tb-pop-out 90ms ease-in forwards;
+}
+.tb-pop[data-side='top'] {
+	--tb-pop-y: 3px;
+}
+.tb-pop[data-side='bottom'] {
+	--tb-pop-y: -3px;
+}
+.tb-pop[data-side='left'] {
+	--tb-pop-x: 3px;
+}
+.tb-pop[data-side='right'] {
+	--tb-pop-x: -3px;
+}
+.tb-fade[data-state='open'] {
+	animation: tb-fade-in 140ms ease-out;
+}
+.tb-fade[data-state='closed'] {
+	animation: tb-fade-out 90ms ease-in forwards;
 }
 
 /* A moved item flashes once so you can see where it landed. */
@@ -228,4 +340,32 @@ html[data-tb-root] body {
 /* Scroll areas that should not show a bar (the side rail's tool list). */
 .tb-no-scrollbar {
 	scrollbar-width: none;
+}
+
+/* Sonner toasts, restyled with theme tokens (it renders its own markup). */
+[data-tb-root] [data-sonner-toaster] {
+	--normal-bg: var(--tb-raised);
+	--normal-border: var(--tb-line-strong);
+	--normal-text: var(--tb-ink);
+	--border-radius: var(--radius-lg);
+	font-family: var(--tb-font);
+}
+[data-tb-root] [data-sonner-toast] {
+	box-shadow: var(--tb-shadow-float);
+	font-size: var(--text-base);
+	padding: 10px 12px;
+	gap: 8px;
+}
+[data-tb-root] [data-sonner-toast] [data-description] {
+	color: var(--tb-muted);
+	font-size: var(--text-sm);
+}
+[data-tb-root] [data-sonner-toast][data-type='error'] [data-icon] {
+	color: var(--tb-danger);
+}
+[data-tb-root] [data-sonner-toast][data-type='success'] [data-icon] {
+	color: var(--tb-ok);
+}
+[data-tb-root] [data-sonner-toast][data-type='warning'] [data-icon] {
+	color: var(--tb-warn);
 }

@@ -15,8 +15,16 @@ describe('normalizeHex', () => {
 });
 
 describe('formats', () => {
-	it('gives HEX, RGB and HSL for a colour', () => {
-		expect(formats('#2e55e6')).toEqual({ hex: '#2E55E6', rgb: 'rgb(46, 85, 230)', hsl: 'hsl(227, 79%, 54%)' });
+	it('gives HEX, RGB, HSL, OKLCH and a CSS variable for a colour', () => {
+		expect(formats('#2e55e6')).toEqual({
+			hex: '#2E55E6',
+			rgb: 'rgb(46, 85, 230)',
+			hsl: 'hsl(227, 79%, 54%)',
+			oklch: 'oklch(51.9% 0.223 266.5)',
+			css: '--color: #2e55e6;'
+		});
+		expect(formats('#808080').oklch).toBe('oklch(60% 0 0)'); // greys: no chroma, hue 0
+		expect(formats('#ffffff').oklch).toBe('oklch(100% 0 0)');
 		expect(formats('#000000').hsl).toBe('hsl(0, 0%, 0%)');
 		expect(formats('#ffffff').rgb).toBe('rgb(255, 255, 255)');
 	});

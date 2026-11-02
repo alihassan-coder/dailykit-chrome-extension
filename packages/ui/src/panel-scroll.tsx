@@ -1,6 +1,6 @@
 // The side panel gives each tool its own scroll area. Tools reach it here, so a chat can follow new
 // messages without fighting someone who scrolled up to read.
-import { createContext, useCallback, useContext, useLayoutEffect, useRef, type RefObject } from 'react';
+import { createContext, useContext, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 
 const PanelScroll = createContext<RefObject<HTMLElement | null> | null>(null);
 
@@ -10,6 +10,11 @@ export const PanelScrollProvider = PanelScroll.Provider;
 export function usePanelScroll(): RefObject<HTMLElement | null> {
 	const fallback = useRef<HTMLElement | null>(null);
 	return useContext(PanelScroll) ?? fallback;
+}
+
+const nearBottom = (el: HTMLElement) => el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+function pinToBottom(el: HTMLElement | null) {
+	if (el) el.scrollTop = el.scrollHeight;
 }
 
 /**
@@ -24,21 +29,21 @@ export function useStickToBottom(deps: unknown[]): () => void {
 		const el = scroller.current;
 		if (!el) return;
 		const onScroll = () => {
-			stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+			stick.current = nearBottom(el);
 		};
 		el.addEventListener('scroll', onScroll, { passive: true });
 		return () => el.removeEventListener('scroll', onScroll);
 	}, [scroller]);
 
 	useLayoutEffect(() => {
-		const el = scroller.current;
-		if (el && stick.current) el.scrollTop = el.scrollHeight;
+		if (stick.current) pinToBottom(scroller.current);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, deps);
 
-	return useCallback(() => {
+	// One stable function for the component's lifetime; the scroll area's ref object never changes.
+	const [pin] = useState(() => () => {
 		stick.current = true;
-		const el = scroller.current;
-		if (el) el.scrollTop = el.scrollHeight;
-	}, [scroller]);
+		pinToBottom(scroller.current);
+	});
+	return pin;
 }

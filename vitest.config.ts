@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
 	test: {
 		include: ['test/**/*.test.ts', '{apps,packages,tools}/*/test/**/*.test.{ts,tsx}'],
+		setupFiles: ['test/setup-dom.ts'],
 		// Database tests start real Postgres (PGlite, WebAssembly); the first start takes several seconds.
 		hookTimeout: 60_000,
 		testTimeout: 30_000

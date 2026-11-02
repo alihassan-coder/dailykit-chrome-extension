@@ -11,3 +11,11 @@ export * from './ToolTile.tsx';
 export * from './Select.tsx';
 export * from './BrandIcon.tsx';
 export * from './panel-scroll.tsx';
+export * from './errors.tsx';
+// shadcn primitives, for screens that need more than the wrappers above.
+export * from './shadcn/cn.ts';
+export * from './shadcn/button.tsx';
+export * from './shadcn/fields.tsx';
+export * from './shadcn/overlays.tsx';
+export * from './shadcn/command.tsx';
+export * from './shadcn/misc.tsx';

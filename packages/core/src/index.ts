@@ -8,3 +8,4 @@ export * from './anthropic-auth.ts';
 export * from './account-messages.ts';
 export * from './memory-messages.ts';
 export * from './format.ts';
+export * from './errors.ts';

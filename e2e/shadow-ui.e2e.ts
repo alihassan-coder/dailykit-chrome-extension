@@ -63,7 +63,7 @@ describe('shadow-root UI (spike 2)', () => {
 			const s = getComputedStyle(el);
 			return { bg: s.backgroundColor, fontSize: s.fontSize, shadow: s.boxShadow };
 		});
-		expect(style.bg).toBe('rgb(46, 85, 230)');
+		expect(style.bg).toBe('rgb(68, 103, 245)'); // the default Toolbelt blue, #4467f5, applied from settings
 		expect(style.fontSize).toBe('13px'); // px tokens: unaffected by the page's 10px root font size
 		expect(style.shadow).not.toBe('none'); // ring + shadow rely on hoisted @property rules
 	});

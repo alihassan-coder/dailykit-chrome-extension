@@ -19,6 +19,16 @@ export interface ModelChoice {
 	model: string;
 }
 
+const PROVIDER_NAMES: Record<ProviderId, string> = {
+	anthropic: 'Anthropic',
+	openai: 'OpenAI',
+	xai: 'xAI',
+	gemini: 'Google'
+};
+
+/** "Anthropic", "Google": how a provider is named on screen and in error messages. */
+export const providerName = (id: ProviderId | string) => PROVIDER_NAMES[id as ProviderId] ?? id;
+
 /** Claude Opus 5.5 when Anthropic is available, otherwise the first live model. */
 export function defaultChoice(models: ModelInfo[]): ModelChoice | null {
 	const preferred = models.find((m) => m.provider === 'anthropic' && m.id === 'claude-opus-5-5') ?? models[0];

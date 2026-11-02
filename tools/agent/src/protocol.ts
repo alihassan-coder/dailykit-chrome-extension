@@ -7,7 +7,9 @@ export type PageRequest =
 	| { type: 'agent:find'; query: string }
 	| { type: 'agent:text' }
 	| { type: 'agent:target'; ref: string }
+	| { type: 'agent:focused' }
 	| { type: 'agent:act'; action: PageAction }
+	| { type: 'agent:wait'; selector?: string; text?: string; timeoutMs?: number }
 	| { type: 'agent:highlight'; ref: string | null };
 
 export const isPageRequest = (m: unknown): m is PageRequest =>

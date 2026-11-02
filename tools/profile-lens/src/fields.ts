@@ -1,6 +1,8 @@
 // Question sets: an ICP plus the questions you want answered about every profile. Each question has a
-// type, and the type decides the shape of the AI's answer (a schema), so answers come back checkable
-// and can be shown as a badge, a score bar or a list instead of a paragraph.
+// type, and the type decides the shape of the AI's answer, so answers come back checkable and can be shown
+// as a badge, a score or a list instead of a paragraph. The schema the model fills is deliberately lenient
+// (numbers are numbers, options are strings); `normalizeAnalysis` then rounds, clamps and snaps in code, so
+// one 7.5 or an unlisted option never fails the whole analysis.
 import { z } from 'zod';
 
 export const FIELD_TYPES = {
@@ -105,33 +107,50 @@ export function resolveSets(raw: unknown): QuestionSet[] {
 	return sets.length ? sets : DEFAULT_SETS;
 }
 
-/** The answer's shape for one question. `null` always means "the profile doesn't say". */
+/** A problem that would make a set fail or mislead the AI. */
+export type SetIssue = { fieldId?: string; message: string };
+
+/** Empty when the set is ready to use. Checked before analysing and before the editor saves. */
+export function validateSet(set: QuestionSet): SetIssue[] {
+	const issues: SetIssue[] = [];
+	if (!set.name.trim()) issues.push({ message: 'Give the set a name.' });
+	for (const f of set.fields) {
+		const at = (message: string) => issues.push({ fieldId: f.id, message });
+		if (!f.label.trim()) at('Write the question.');
+		if ((f.type === 'choice' || f.type === 'multi') && !(f.options ?? []).some((o) => o.trim()))
+			at('Add at least one option.');
+		if (f.type === 'score') {
+			const min = f.min ?? 1;
+			const max = f.max ?? 10;
+			if (!Number.isFinite(min) || !Number.isFinite(max)) at('Enter both ends of the range.');
+			else if (min >= max) at('The lowest score must be below the highest.');
+		}
+	}
+	return issues;
+}
+
+/** The answer's shape for one question, as the model is asked to give it. `null` means "the profile doesn't say". */
 export function valueSchema(field: Field) {
 	switch (field.type) {
 		case 'text':
 		case 'custom':
+		case 'choice':
 			return z.string().nullable();
 		case 'yesno':
 			return z.boolean().nullable();
 		case 'score':
-			return z
-				.number()
-				.int()
-				.min(field.min ?? 1)
-				.max(field.max ?? 10)
-				.nullable();
 		case 'number':
 			return z.number().nullable();
-		case 'choice':
-			return z.enum(field.options as [string, ...string[]]).nullable();
 		case 'multi':
-			return z.array(z.enum(field.options as [string, ...string[]]));
 		case 'list':
 			return z.array(z.string());
 	}
 }
 
-const CONFIDENCE = z.enum(['high', 'medium', 'low']);
+export const SENIORITY = ['entry', 'mid', 'senior', 'lead', 'executive', 'founder'] as const;
+export const VERDICTS = ['strong', 'possible', 'weak', 'no'] as const;
+export type Verdict = (typeof VERDICTS)[number];
+export type Confidence = 'high' | 'medium' | 'low';
 
 /** The facts every analysis pulls out, whatever the questions are. */
 const FACTS = z.object({
@@ -140,7 +159,10 @@ const FACTS = z.object({
 	currentRole: z.string().nullable(),
 	currentCompany: z.string().nullable(),
 	yearsOfExperience: z.number().nullable().describe('Total professional years, estimated from the experience dates'),
-	seniority: z.enum(['entry', 'mid', 'senior', 'lead', 'executive', 'founder']).nullable(),
+	seniority: z
+		.string()
+		.nullable()
+		.describe(`One of: ${SENIORITY.join(', ')}; null if unclear`),
 	companies: z.array(z.string()).describe('Past and present employers, most recent first'),
 	education: z.array(z.string()),
 	certifications: z.array(z.string()),
@@ -148,22 +170,22 @@ const FACTS = z.object({
 	postTopics: z.array(z.string()).describe('What their recent posts are about; empty if no posts were read')
 });
 
+/** The lenient schema the model fills in. Its output always goes through `normalizeAnalysis`. */
 export function analysisSchema(set: QuestionSet) {
 	const answers = Object.fromEntries(
 		set.fields.map((f) => [
 			f.id,
 			z.object({
 				value: valueSchema(f),
-				evidence: z.string().describe('What on the profile supports this, quoted or paraphrased briefly'),
-				confidence: CONFIDENCE
+				evidence: z.string().describe('What on the profile supports this, briefly; empty when value is null'),
+				confidence: z.string().describe('high, medium or low')
 			})
 		])
 	);
 	return z.object({
 		facts: FACTS,
 		icp: z.object({
-			score: z.number().int().min(0).max(100).describe('How well this person matches the ICP, 0–100'),
-			verdict: z.enum(['strong', 'possible', 'weak', 'no']),
+			score: z.number().describe('How well this person matches the ICP, a whole number 0–100'),
 			reasons: z.array(z.string()).describe('2–4 short reasons, for and against')
 		}),
 		answers: z.object(answers),
@@ -171,8 +193,113 @@ export function analysisSchema(set: QuestionSet) {
 	});
 }
 
-export type Analysis = z.infer<ReturnType<typeof analysisSchema>>;
-export type Answer = { value: unknown; evidence: string; confidence: 'high' | 'medium' | 'low' };
+export interface Facts {
+	headline: string;
+	location: string | null;
+	currentRole: string | null;
+	currentCompany: string | null;
+	yearsOfExperience: number | null;
+	seniority: (typeof SENIORITY)[number] | null;
+	companies: string[];
+	education: string[];
+	certifications: string[];
+	topSkills: string[];
+	postTopics: string[];
+}
+
+export type Answer = { value: unknown; evidence: string; confidence: Confidence };
+
+export interface Analysis {
+	facts: Facts;
+	icp: { score: number; verdict: Verdict; reasons: string[] };
+	answers: Record<string, Answer>;
+	summary: string;
+}
+
+/** The verdict follows the score, so the two never disagree. Matches the rubric in the prompt. */
+export function verdictFor(score: number): Verdict {
+	return score >= 75 ? 'strong' : score >= 50 ? 'possible' : score >= 25 ? 'weak' : 'no';
+}
+
+const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+const norm = (s: string) => s.trim().toLowerCase();
+const finite = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
+/** The listed option closest to what the model wrote: the same words in any case, or one inside the other. */
+export function snapOption<T extends string>(options: readonly T[], raw: unknown): T | null {
+	if (typeof raw !== 'string' || !raw.trim()) return null;
+	const v = norm(raw);
+	return options.find((o) => norm(o) === v) ?? options.find((o) => v.includes(norm(o)) || norm(o).includes(v)) ?? null;
+}
+
+/** One answer in its question's shape: scores rounded and clamped, options snapped, anything else null. */
+export function normalizeValue(field: Field, value: unknown): unknown {
+	const num = finite(value);
+	const strings = Array.isArray(value)
+		? value.filter((v): v is string => typeof v === 'string' && !!v.trim()).map((v) => v.trim())
+		: [];
+	switch (field.type) {
+		case 'text':
+		case 'custom':
+			return typeof value === 'string' && value.trim() ? value.trim() : null;
+		case 'yesno':
+			return typeof value === 'boolean' ? value : null;
+		case 'score':
+			return num === null ? null : clamp(Math.round(num), field.min ?? 1, field.max ?? 10);
+		case 'number':
+			return num;
+		case 'choice':
+			return snapOption(field.options ?? [], value);
+		case 'multi':
+			return [...new Set(strings.map((s) => snapOption(field.options ?? [], s)).filter((s) => s !== null))];
+		case 'list':
+			return [...new Set(strings)];
+	}
+}
+
+const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+const strOrNull = (v: unknown) => str(v) || null;
+const strList = (v: unknown) => (Array.isArray(v) ? [...new Set(v.map(str).filter(Boolean))] : []);
+const CONFIDENCES: readonly Confidence[] = ['high', 'medium', 'low'];
+
+/** Turns the model's lenient output into a checked Analysis for this set. Never throws. */
+export function normalizeAnalysis(raw: unknown, set: QuestionSet): Analysis {
+	const r = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, Record<string, unknown> | undefined>;
+	const facts = r.facts ?? {};
+	const icp = r.icp ?? {};
+	const rawAnswers = r.answers ?? {};
+	const years = finite(facts.yearsOfExperience);
+	const score = clamp(Math.round(finite(icp.score) ?? 0), 0, 100);
+	const answers: Record<string, Answer> = {};
+	for (const f of set.fields) {
+		const a = (rawAnswers[f.id] ?? {}) as Record<string, unknown>;
+		const value = normalizeValue(f, a.value);
+		const empty = value === null || (Array.isArray(value) && value.length === 0);
+		answers[f.id] = {
+			value,
+			evidence: empty ? '' : str(a.evidence),
+			confidence: empty ? 'low' : (snapOption(CONFIDENCES, a.confidence) ?? 'low')
+		};
+	}
+	return {
+		facts: {
+			headline: str(facts.headline),
+			location: strOrNull(facts.location),
+			currentRole: strOrNull(facts.currentRole),
+			currentCompany: strOrNull(facts.currentCompany),
+			yearsOfExperience: years === null ? null : Math.max(0, Math.round(years)),
+			seniority: snapOption(SENIORITY, facts.seniority),
+			companies: strList(facts.companies),
+			education: strList(facts.education),
+			certifications: strList(facts.certifications),
+			topSkills: strList(facts.topSkills).slice(0, 10),
+			postTopics: strList(facts.postTopics)
+		},
+		icp: { score, verdict: verdictFor(score), reasons: strList(icp.reasons) },
+		answers,
+		summary: str(r.summary)
+	};
+}
 
 /** How each question should be answered, in words, for the prompt. */
 export function describeFields(set: QuestionSet): string {
@@ -180,9 +307,9 @@ export function describeFields(set: QuestionSet): string {
 		.map((f) => {
 			const how =
 				f.type === 'score'
-					? `score from ${f.min} to ${f.max}`
+					? `whole-number score from ${f.min} to ${f.max}`
 					: f.type === 'choice' || f.type === 'multi'
-						? `${FIELD_TYPES[f.type].label.toLowerCase()} of: ${f.options!.join(', ')}`
+						? `${FIELD_TYPES[f.type].label.toLowerCase()}, written exactly as listed, of: ${f.options!.join(', ')}`
 						: FIELD_TYPES[f.type].hint.toLowerCase();
 			return `- [${f.id}] ${f.label} (${how})${f.instructions ? `. Format: ${f.instructions}` : ''}`;
 		})

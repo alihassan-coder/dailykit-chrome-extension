@@ -10,10 +10,17 @@ export interface Proposal {
 	url: string;
 	/** For navigate: where to. */
 	destination?: string;
-	/** The element, as the page describes it. */
-	target?: { role: string; name: string; sensitive: boolean };
+	/**
+	 * The element, as the page describes it. For key presses this is the focused element, because that is
+	 * what the keys act on. `submitName` is the visible name of the submit button of the element's form.
+	 */
+	target?: { role: string; name: string; sensitive: boolean; text?: string; submitName?: string };
 	/** For type / form_input. */
 	text?: string;
+	/** For key: the keys pressed. */
+	keys?: string;
+	/** The action submits a form (type with submit, or Enter in a form field). Treated as clicking its submit button. */
+	submit?: boolean;
 }
 
 export type Decision =
@@ -67,6 +74,35 @@ export function isBlocked(url: string, blocked: string[] = DEFAULT_BLOCKED_SITES
 	return blocked.some((site) => h === site || h.endsWith(`.${site}`));
 }
 
+// Pages no extension can script: browser pages, other extensions, the stores, local files and the PDF viewer.
+const BROWSER_SCHEME =
+	/^(chrome|edge|brave|opera|vivaldi|about|chrome-extension|moz-extension|extension|devtools|view-source|chrome-search|chrome-untrusted|file|data|blob|javascript):/i;
+const STORE =
+	/^https:\/\/(chromewebstore\.google\.com|chrome\.google\.com\/webstore|microsoftedge\.microsoft\.com\/addons)(\/|$)/i;
+
+export function isRestricted(url: string): boolean {
+	if (!url) return false;
+	if (BROWSER_SCHEME.test(url) || STORE.test(url)) return true;
+	try {
+		return /\.pdf$/i.test(new URL(url).pathname);
+	} catch {
+		return true;
+	}
+}
+
+/**
+ * Whether the agent can work on a tab. A tab whose address is empty is one Toolbelt has no access to: without
+ * host permission the browser hides the address from extensions.
+ */
+export type PageAccess = 'ok' | 'no-access' | 'restricted' | 'blocked';
+
+export function pageAccess(url: string): PageAccess {
+	if (!url) return 'no-access';
+	if (isRestricted(url)) return 'restricted';
+	if (isBlocked(url)) return 'blocked';
+	return 'ok';
+}
+
 // Second-level suffixes where the registrable domain has three labels (example.co.uk).
 const TWO_PART_SUFFIXES = new Set([
 	'co.uk',
@@ -97,10 +133,19 @@ const PERMANENT_DELETE =
 	/\b(delete (forever|permanently|account|my account)|permanently delete|empty (the )?trash|erase all)\b/i;
 const CHECKOUT_PATH = /\/(checkout|cart\/pay|payment)(\/|$|\?)/i;
 const AUTH_GRANT = /(accounts\.google\.com|login\.microsoftonline\.com|\/oauth|\/authorize)/i;
+/** Keys that activate the focused element (press a button, follow a link, submit a form). */
+const activates = (keys = '') =>
+	keys.split(/[\s+]+/).some((k) => ['enter', 'return', 'space', 'spacebar'].includes(k.toLowerCase()));
+
+/** The names an action could "press": the element itself, and the submit button when it submits a form. */
+function pressedNames(p: Proposal): string[] {
+	const t = p.target;
+	const names = [t?.name, t?.text];
+	if (p.submit) names.push(t?.submitName);
+	return names.filter((n): n is string => Boolean(n));
+}
 
 export function decide(p: Proposal, opts: { siteAllowed: boolean; runOrigins: Set<string> }): Decision {
-	const name = p.target?.name ?? '';
-
 	if (p.kind === 'navigate') {
 		const to = p.destination ?? '';
 		if (!isWebUrl(to)) return { verdict: 'refuse', reason: 'Only http and https pages can be opened.' };
@@ -108,20 +153,27 @@ export function decide(p: Proposal, opts: { siteAllowed: boolean; runOrigins: Se
 		if (CHECKOUT_PATH.test(to))
 			return { verdict: 'refuse', reason: 'The agent does not open checkout or payment pages.' };
 	}
-	if (isBlocked(p.url)) return { verdict: 'refuse', reason: `${host(p.url)} is on the blocked list.` };
+	if (isBlocked(p.url)) return { verdict: 'refuse', reason: `${host(p.url) || 'This page'} is on the blocked list.` };
 
-	if (p.kind === 'click' || p.kind === 'key') {
-		if (PURCHASE.test(name) || CHECKOUT_PATH.test(p.url)) {
+	const keyActivates = p.kind === 'key' && activates(p.keys);
+	const presses = p.kind === 'click' || keyActivates || p.submit === true;
+	if (presses || p.kind === 'form_input') {
+		const names = pressedNames(p);
+		if (names.some((n) => PURCHASE.test(n)) || (presses && CHECKOUT_PATH.test(p.url))) {
 			return { verdict: 'refuse', reason: 'The agent never buys or pays for anything. Do this step yourself.' };
 		}
-		if (ACCOUNT_CREATION.test(name)) return { verdict: 'refuse', reason: 'The agent does not create accounts.' };
-		if (PERMANENT_DELETE.test(name))
+		if (presses && names.some((n) => ACCOUNT_CREATION.test(n)))
+			return { verdict: 'refuse', reason: 'The agent does not create accounts.' };
+		if (names.some((n) => PERMANENT_DELETE.test(n)))
 			return { verdict: 'refuse', reason: 'The agent does not delete things permanently.' };
 	}
 
 	const warnings: string[] = [];
 	if ((p.kind === 'type' || p.kind === 'form_input') && p.target?.sensitive) {
 		warnings.push('This is a password, payment or one-time-code field.');
+	}
+	if (p.submit) {
+		warnings.push(p.target?.submitName ? `Submits the form (“${p.target.submitName}”).` : 'Submits the form.');
 	}
 	if (p.kind === 'navigate' && p.destination) {
 		const origin = new URL(p.destination).origin;

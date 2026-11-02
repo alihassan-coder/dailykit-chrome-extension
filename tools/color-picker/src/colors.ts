@@ -34,13 +34,38 @@ function toHsl({ r, g, b }: { r: number; g: number; b: number }) {
 	return { h: (h * 60 + 360) % 360, s, l };
 }
 
+const linear = (c: number) => {
+	const v = c / 255;
+	return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+};
+
+/** sRGB -> OKLCH (Björn Ottosson's OKLab matrices). */
+function toOklch({ r, g, b }: { r: number; g: number; b: number }) {
+	const [lr, lg, lb] = [linear(r), linear(g), linear(b)];
+	const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+	const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+	const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+	const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+	const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+	const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+	const C = Math.hypot(A, B);
+	// Greys have no meaningful hue; CSS writes it as 0.
+	const H = C < 0.0005 ? 0 : (Math.atan2(B, A) * 180) / Math.PI;
+	return { l: L, c: C, h: (H + 360) % 360 };
+}
+
+const trim = (n: number, digits: number) => String(Number(n.toFixed(digits)));
+
 export function formats(hex: Hex) {
 	const rgb = toRgb(hex);
 	const { h, s, l } = toHsl(rgb);
+	const ok = toOklch(rgb);
 	return {
 		hex: hex.toUpperCase(),
 		rgb: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
-		hsl: `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`
+		hsl: `hsl(${Math.round(h)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`,
+		oklch: `oklch(${trim(ok.l * 100, 1)}% ${trim(ok.c, 3)} ${trim(ok.h, 1)})`,
+		css: `--color: ${hex};`
 	};
 }
 

@@ -21,8 +21,8 @@ describe('themeTokens', () => {
 			{ ...DEFAULT_THEME, corners: 'round', density: 'compact', textSize: 'large', font: 'system' },
 			false
 		);
-		expect(t.vars['--tb-radius']).toBe('16px');
-		expect(t.vars['--tb-density']).toBe('0.8');
+		expect(t.vars['--tb-radius']).toBe('10px');
+		expect(t.vars['--tb-density']).toBe('0.875');
 		expect(t.vars['--tb-scale']).toBe('1.08');
 		expect(t.vars['--tb-font']).toMatch(/^system-ui/);
 	});

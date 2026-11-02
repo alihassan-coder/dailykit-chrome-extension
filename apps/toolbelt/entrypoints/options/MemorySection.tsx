@@ -1,21 +1,141 @@
 // Memory: what the browser agent remembers about you between chats. The memories themselves stay in the
 // background (encrypted in your database); this screen asks for them with memory messages.
-import { timeAgo, type MemoryItem, type MemoryRequest, type MemoryResponse, type MemoryStatus } from '@toolbelt/core';
-import { Button, EmptyState, IconButton, Switch } from '@toolbelt/ui';
-import { Brain, KeyRound, Lock, Search, ShieldAlert, Trash2, X } from 'lucide-react';
+import {
+	appError,
+	toAppError,
+	timeAgo,
+	type AppError,
+	type MemoryItem,
+	type MemoryRequest,
+	type MemoryResponse,
+	type MemoryStatus
+} from '@toolbelt/core';
+import {
+	Button,
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+	ConfirmDialog,
+	EmptyRow,
+	EmptyState,
+	ErrorNotice,
+	IconButton,
+	Input,
+	Skeleton,
+	Switch,
+	cn,
+	showError,
+	toast
+} from '@toolbelt/ui';
+import { ChevronRight, KeyRound, Lock, Search, ShieldCheck, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { browser } from 'wxt/browser';
+import { SettingsGroup, SettingsHeader, SettingsRow } from './shared.tsx';
 
-const ask = (req: MemoryRequest) => browser.runtime.sendMessage(req) as Promise<MemoryResponse>;
+/** A failed answer from the background, as an Error the shared error model can read. */
+class MemoryFailure extends Error {
+	override name = 'MemoryFailure';
+}
+
+/** Sends a memory request; a failed answer throws, so every caller handles failures the same way. */
+async function ask(req: MemoryRequest): Promise<Extract<MemoryResponse, { ok: true }>> {
+	const res = (await browser.runtime.sendMessage(req)) as MemoryResponse;
+	if (!res.ok) throw Object.assign(new MemoryFailure(res.error), { status: res.status });
+	return res;
+}
+const statusOf = (e: unknown): MemoryStatus | undefined => (e as { status?: MemoryStatus } | null)?.status;
+
+/** The background's failure text is not shown as is; it is mapped to the shared wording. */
+function describe(e: unknown, title: string): AppError {
+	const err = toAppError(e);
+	return err.code === 'unknown' ? appError('unknown', {}, { title }) : err;
+}
+
+type View = {
+	status: MemoryStatus | null;
+	items: MemoryItem[];
+	/** The query the list shows results for ('' = everything). */
+	searched: string;
+	loading: boolean;
+	error: AppError | null;
+};
+
+function useMemory() {
+	const [view, setView] = useState<View>({ status: null, items: [], searched: '', loading: true, error: null });
+
+	const list = useCallback(async (query: string) => {
+		setView((v) => ({ ...v, loading: true }));
+		try {
+			const res = await ask({ type: 'memory:list', query: query || undefined });
+			setView({ status: res.status, items: res.items ?? [], searched: query, loading: false, error: null });
+		} catch (e) {
+			setView((v) => ({
+				...v,
+				status: statusOf(e) ?? v.status,
+				loading: false,
+				error: describe(e, 'Could not load memories')
+			}));
+		}
+	}, []);
+
+	useEffect(() => {
+		void list('');
+	}, [list]);
+
+	async function remove(item: MemoryItem) {
+		const at = view.items.findIndex((m) => m.id === item.id);
+		setView((v) => ({ ...v, items: v.items.filter((m) => m.id !== item.id) }));
+		try {
+			const res = await ask({ type: 'memory:delete', id: item.id });
+			setView((v) => ({ ...v, status: res.status }));
+		} catch (e) {
+			// Put it back where it was.
+			setView((v) => {
+				const items = v.items.some((m) => m.id === item.id) ? v.items : v.items.toSpliced(Math.max(0, at), 0, item);
+				return { ...v, items, status: statusOf(e) ?? v.status };
+			});
+			showError(describe(e, 'Could not delete the memory'));
+		}
+	}
+
+	async function removeAll() {
+		try {
+			await ask({ type: 'memory:delete-all' });
+			toast.success('All memories deleted');
+		} catch (e) {
+			showError(describe(e, 'Could not delete memories'));
+		}
+		await list('');
+	}
+
+	async function setEnabled(enabled: boolean) {
+		setView((v) => (v.status?.state === 'ready' ? { ...v, status: { ...v.status, enabled } } : v));
+		try {
+			const res = await ask({ type: 'memory:set-enabled', enabled });
+			setView((v) => ({ ...v, status: res.status }));
+		} catch (e) {
+			setView((v) => (v.status?.state === 'ready' ? { ...v, status: { ...v.status, enabled: !enabled } } : v));
+			showError(describe(e, 'Could not change memory'));
+		}
+	}
+
+	return { ...view, list, remove, removeAll, setEnabled, dismissError: () => setView((v) => ({ ...v, error: null })) };
+}
 
 function Off({ status }: { status: MemoryStatus }) {
 	if (status.state === 'no-embedding-key')
 		return (
 			<EmptyState
+				icon={<KeyRound />}
 				title="Add an OpenAI or Gemini key to turn memory on"
-				body="Memory uses embeddings to find the right notes later. Anthropic and xAI have no embedding service, so memory needs an OpenAI or Gemini key, even when the agent uses Claude or Grok. Everything else works without it."
+				body="Memory uses embeddings to find notes later. Anthropic and xAI have no embedding service, so memory needs an OpenAI or Gemini key, even when the agent uses Claude or Grok."
 				action={
-					<Button variant="primary" icon={<KeyRound size={16} />} onClick={() => (location.hash = '#ai')}>
+					<Button
+						variant="primary"
+						size="sm"
+						icon={<KeyRound aria-hidden="true" />}
+						onClick={() => (location.hash = '#ai')}
+					>
 						Add a key in AI providers
 					</Button>
 				}
@@ -24,6 +144,7 @@ function Off({ status }: { status: MemoryStatus }) {
 	const locked = status.state === 'locked';
 	return (
 		<EmptyState
+			icon={<Lock />}
 			title={locked ? 'Unlock Toolbelt to use memory' : 'Memory needs a Toolbelt account'}
 			body={
 				locked
@@ -31,7 +152,12 @@ function Off({ status }: { status: MemoryStatus }) {
 					: 'Memories are stored encrypted in your own database, so memory needs a Toolbelt account.'
 			}
 			action={
-				<Button variant="primary" icon={<Lock size={16} />} onClick={() => (location.hash = '#data')}>
+				<Button
+					variant="primary"
+					size="sm"
+					icon={<Lock aria-hidden="true" />}
+					onClick={() => (location.hash = '#data')}
+				>
 					{locked ? 'Unlock in Data and sync' : 'Set up in Data and sync'}
 				</Button>
 			}
@@ -39,204 +165,184 @@ function Off({ status }: { status: MemoryStatus }) {
 	);
 }
 
-export function MemorySection() {
-	const [status, setStatus] = useState<MemoryStatus | null>(null);
-	const [items, setItems] = useState<MemoryItem[]>([]);
-	const [query, setQuery] = useState('');
-	const [searched, setSearched] = useState('');
-	const [error, setError] = useState<string | null>(null);
-	const [busy, setBusy] = useState(true);
-	const [confirming, setConfirming] = useState(false);
-
-	const send = useCallback(async (req: MemoryRequest) => {
-		const res = await ask(req).catch((e: unknown) => ({
-			ok: false as const,
-			status: null,
-			error: e instanceof Error ? e.message : String(e)
-		}));
-		if (res.status) setStatus(res.status);
-		setError(res.ok ? null : res.error);
-		return res;
-	}, []);
-
-	const show = useCallback(
-		async (q: string) => {
-			const res = await send({ type: 'memory:list', query: q });
-			if (res.ok) {
-				setItems(res.items ?? []);
-				setSearched(q);
-			}
-			setBusy(false);
-		},
-		[send]
+function PrivacyNote() {
+	const [open, setOpen] = useState(false);
+	return (
+		<Collapsible open={open} onOpenChange={setOpen} className="px-0.5">
+			<CollapsibleTrigger className="inline-flex h-6 items-center gap-1.5 rounded-sm text-sm text-faint hover:text-ink">
+				<ShieldCheck size={14} aria-hidden="true" />
+				Encrypted with your master password, kept in your own database
+				<ChevronRight size={14} aria-hidden="true" className={cn('transition-transform', open && 'rotate-90')} />
+			</CollapsibleTrigger>
+			<CollapsibleContent>
+				<p className="max-w-[60ch] pt-1 pl-5 text-sm text-muted">
+					Only the text you and the agent wrote is used, never page content, and never passwords or payment details. To
+					pick and find memories, notes are sent to your own AI provider.
+				</p>
+			</CollapsibleContent>
+		</Collapsible>
 	);
+}
 
-	useEffect(() => {
-		void ask({ type: 'memory:list' })
-			.then((res) => {
-				setStatus(res.status);
-				if (res.ok) setItems(res.items ?? []);
-				else setError(res.error);
-			})
-			.catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
-			.finally(() => setBusy(false));
-	}, []);
+function MemoryRows({ items, onDelete }: { items: MemoryItem[]; onDelete: (m: MemoryItem) => void }) {
+	return (
+		<ul aria-label="Memories" className="divide-y divide-line">
+			{items.map((m) => (
+				<li key={m.id} className="group flex min-h-9 items-start gap-3 px-3 py-2 hover:bg-hover">
+					<p className="line-clamp-2 min-w-0 flex-1 text-base break-words" title={m.text}>
+						{m.text}
+					</p>
+					<span className="relative flex h-5 shrink-0 items-center justify-end">
+						<span className="text-sm text-faint tb-num whitespace-nowrap group-focus-within:invisible group-hover:invisible">
+							{m.otherModel ? 'Not used · ' : ''}
+							{timeAgo(m.createdAt)}
+						</span>
+						<span className="absolute right-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
+							<IconButton size="xs" label={`Delete memory: ${m.text}`} onClick={() => onDelete(m)}>
+								<Trash2 aria-hidden="true" />
+							</IconButton>
+						</span>
+					</span>
+				</li>
+			))}
+		</ul>
+	);
+}
 
-	function load(q: string) {
-		setBusy(true);
-		return show(q);
-	}
+export function MemorySection() {
+	const memory = useMemory();
+	const { status, items, searched, loading, error } = memory;
+	const [query, setQuery] = useState('');
+	const lastUpdated = items.reduce((max, m) => Math.max(max, m.createdAt), 0);
 
 	function search(e: FormEvent) {
 		e.preventDefault();
-		void load(query.trim());
-	}
-
-	async function remove(id: string) {
-		setItems((list) => list.filter((m) => m.id !== id));
-		await send({ type: 'memory:delete', id });
-	}
-
-	async function removeAll() {
-		setBusy(true);
-		await send({ type: 'memory:delete-all' });
-		setConfirming(false);
-		setQuery('');
-		await load('');
+		void memory.list(query.trim());
 	}
 
 	return (
 		<section aria-labelledby="memory-title" className="grid gap-4">
-			<div>
-				<h2 id="memory-title" className="text-xl font-semibold">
-					Memory
-				</h2>
-				<p className="text-sm text-muted">
-					The browser agent can remember things you tell it, like preferences, and use them in later chats.
-				</p>
-			</div>
+			<SettingsHeader
+				id="memory-title"
+				title="Memory"
+				description="The browser agent remembers things you tell it, like preferences, for later chats."
+			/>
+			<PrivacyNote />
 
-			<div className="flex items-start gap-3 rounded-lg border border-line bg-soft p-4 text-sm">
-				<Brain size={18} className="mt-0.5 shrink-0 text-muted" />
-				<p>
-					Memories are encrypted with your master password and kept in your own database. Only the text you and the
-					agent wrote is used, never page content, and never passwords or payment details. To pick and find them, notes
-					are sent to your own AI provider.
-				</p>
-			</div>
+			{error && (!status || status.state === 'ready') && (
+				<ErrorNotice
+					error={error}
+					onAction={(kind) => kind === 'retry' && void memory.list(searched)}
+					onDismiss={memory.dismissError}
+				/>
+			)}
+
+			{!status && loading && (
+				<div className="grid gap-2" aria-busy="true" aria-label="Loading memories">
+					<Skeleton className="h-11" />
+					<Skeleton className="h-24" />
+				</div>
+			)}
 
 			{status && status.state !== 'ready' && <Off status={status} />}
 
 			{status?.state === 'ready' && (
 				<>
-					<div className="grid gap-3 rounded-lg border border-line bg-surface p-5">
-						<div className="flex items-center justify-between gap-4">
-							<div className="grid gap-0.5">
-								<p className="text-base font-medium">Let the agent remember</p>
-								<p className="text-sm text-muted">
-									Before a task it looks up notes that may help; after it finishes, it saves what is worth keeping.
-								</p>
-							</div>
+					<SettingsGroup>
+						<SettingsRow
+							label="Let the agent remember"
+							hint="Before a task it looks up notes that may help; after, it saves what is worth keeping."
+						>
 							<Switch
 								label="Let the agent remember"
 								checked={status.enabled}
-								onChange={(enabled) => void send({ type: 'memory:set-enabled', enabled })}
+								onChange={(v) => void memory.setEnabled(v)}
 							/>
+						</SettingsRow>
+						{status.lastError && (
+							<div className="px-3 py-2.5">
+								<ErrorNotice error={describe(new MemoryFailure(status.lastError), 'The last memory update failed')} />
+							</div>
+						)}
+					</SettingsGroup>
+
+					<div className="grid gap-1.5">
+						<div className="flex flex-wrap items-center gap-2">
+							<p className="min-w-0 flex-1 truncate px-0.5 text-sm text-faint tb-num">
+								{status.count} {status.count === 1 ? 'memory' : 'memories'} · finds notes with {status.embedder} · picks
+								them with {status.extractor}
+								{lastUpdated > 0 && ` · last added ${timeAgo(lastUpdated)}`}
+							</p>
+							{status.count + status.otherModel > 0 && (
+								<ConfirmDialog
+									title="Delete every memory?"
+									description="Deletes every memory on all your devices. This cannot be undone."
+									confirmLabel="Delete all memories"
+									onConfirm={() => void memory.removeAll()}
+									trigger={
+										<Button size="xs" variant="danger-ghost" icon={<Trash2 aria-hidden="true" />}>
+											Delete all…
+										</Button>
+									}
+								/>
+							)}
 						</div>
-						<p className="text-sm text-muted tabular-nums">
-							{status.count} {status.count === 1 ? 'memory' : 'memories'} · finds notes with {status.embedder} · picks
-							them with {status.extractor}
-						</p>
 						{status.otherModel > 0 && (
-							<p className="text-sm text-muted">
+							<p className="px-0.5 text-sm text-faint">
 								{status.otherModel} {status.otherModel === 1 ? 'memory was' : 'memories were'} made with another
 								embedding model and {status.otherModel === 1 ? 'is' : 'are'} not used by the agent.
 							</p>
 						)}
-						{(error ?? status.lastError) && (
-							<p role="alert" className="flex items-start gap-1.5 text-sm text-warn">
-								<ShieldAlert size={16} className="mt-0.5 shrink-0" /> {error ?? status.lastError}
-							</p>
-						)}
-					</div>
 
-					<form onSubmit={search} className="flex gap-2">
-						<div className="relative min-w-0 flex-1">
-							<Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
-							<input
+						<form onSubmit={search} className="relative" role="search">
+							<Search
+								size={14}
+								aria-hidden="true"
+								className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-faint"
+							/>
+							<Input
 								type="search"
 								value={query}
 								onChange={(e) => setQuery(e.target.value)}
-								placeholder="Search memories, like “food” or “where I live”"
+								placeholder="Search memories, like “food” or “where I live”, then press Enter"
 								aria-label="Search memories"
-								className="h-9 w-full rounded-md border border-line bg-bg pr-3 pl-9 text-sm outline-none focus:border-accent"
+								className="pr-9 pl-8"
 							/>
-						</div>
-						<Button type="submit" disabled={busy}>
-							Search
-						</Button>
-						{searched && (
-							<IconButton
-								label="Clear search"
-								onClick={() => {
-									setQuery('');
-									void load('');
-								}}
-							>
-								<X size={16} />
-							</IconButton>
-						)}
-					</form>
-
-					{items.length === 0 && !busy ? (
-						<EmptyState
-							title={searched ? 'Nothing matches' : 'No memories yet'}
-							body={
-								searched
-									? 'The agent would not recall anything for this. Try other words.'
-									: 'After the agent finishes a task, anything worth remembering shows up here.'
-							}
-						/>
-					) : (
-						<ul className="rounded-lg border border-line bg-surface px-5" aria-label="Memories">
-							{items.map((m) => (
-								<li key={m.id} className="flex items-start gap-3 border-t border-line py-3 first:border-t-0">
-									<div className="grid min-w-0 flex-1 gap-0.5">
-										<p className="text-base break-words">{m.text}</p>
-										<p className="text-xs text-muted">
-											{timeAgo(m.createdAt)}
-											{m.otherModel && ' · made with another embedding model, not used'}
-										</p>
-									</div>
-									<IconButton label={`Delete memory: ${m.text}`} onClick={() => void remove(m.id)}>
-										<Trash2 size={16} />
+							{searched && (
+								<span className="absolute top-1/2 right-1 -translate-y-1/2">
+									<IconButton
+										size="xs"
+										type="button"
+										label="Clear search"
+										onClick={() => {
+											setQuery('');
+											void memory.list('');
+										}}
+									>
+										<X aria-hidden="true" />
 									</IconButton>
-								</li>
-							))}
-						</ul>
-					)}
-
-					{status.count + status.otherModel > 0 && (
-						<div className="flex flex-wrap items-center gap-2">
-							{confirming ? (
-								<>
-									<Button variant="primary" disabled={busy} onClick={() => void removeAll()}>
-										Delete all memories
-									</Button>
-									<Button variant="quiet" onClick={() => setConfirming(false)}>
-										Keep them
-									</Button>
-									<span className="text-sm text-muted">
-										Deletes every memory on all your devices. This cannot be undone.
-									</span>
-								</>
-							) : (
-								<Button icon={<Trash2 size={16} />} onClick={() => setConfirming(true)}>
-									Delete all…
-								</Button>
+								</span>
 							)}
-						</div>
-					)}
+						</form>
+
+						<SettingsGroup>
+							{loading && items.length === 0 ? (
+								<div className="grid gap-2 p-3" aria-busy="true">
+									<Skeleton className="h-5" />
+									<Skeleton className="h-5" />
+									<Skeleton className="h-5 w-2/3" />
+								</div>
+							) : items.length === 0 ? (
+								<EmptyRow>
+									{searched
+										? 'Nothing matches. The agent would not recall anything for this; try other words.'
+										: 'No memories yet. After the agent finishes a task, anything worth remembering shows up here.'}
+								</EmptyRow>
+							) : (
+								<MemoryRows items={items} onDelete={(m) => void memory.remove(m)} />
+							)}
+						</SettingsGroup>
+					</div>
 				</>
 			)}
 		</section>

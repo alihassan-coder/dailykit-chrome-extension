@@ -1,17 +1,26 @@
-// Searchable model picker: type to filter the live model lists, arrow keys to move, Enter to choose.
-import { rankCommands, usePortalContainer } from '@toolbelt/ui';
-import { Popover } from 'radix-ui';
-import { Check, ChevronDown, RefreshCw } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import type { ModelInfo } from './models.ts';
-import type { ModelChoice } from './providers.ts';
+// Searchable model picker: a compact chip that opens a cmdk list of the live models, grouped by provider.
+// Type to filter (by name, id or provider), arrow keys to move, Enter to choose. A typed id that is not
+// listed yet can be used as is.
+import {
+	Button,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandRoot,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	cn,
+	rankCommands
+} from '@toolbelt/ui';
+import { Check, ChevronsUpDown, Eye, RefreshCw, TriangleAlert } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { formatContext, supportsTools, type ModelInfo } from './models.ts';
+import { providerName, type ModelChoice } from './providers.ts';
 
-const PROVIDER_NAMES: Record<string, string> = {
-	anthropic: 'Anthropic',
-	openai: 'OpenAI',
-	xai: 'xAI',
-	gemini: 'Google'
-};
+const keyOf = (m: { provider: string; id: string }) => `${m.provider}|${m.id}`;
 
 export function ModelPicker({
 	models,
@@ -19,7 +28,10 @@ export function ModelPicker({
 	onChoose,
 	onRefresh,
 	refreshing,
-	note
+	note,
+	toolsOnly,
+	warning,
+	className
 }: {
 	models: ModelInfo[];
 	choice: ModelChoice;
@@ -27,30 +39,34 @@ export function ModelPicker({
 	onRefresh: () => void;
 	refreshing: boolean;
 	note?: string | null;
+	/** Hide models that cannot call tools (for agents). */
+	toolsOnly?: boolean;
+	/** Shown as a warning mark on the chip, e.g. "This model isn't in your list". */
+	warning?: string | null;
+	className?: string;
 }) {
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState('');
-	const [active, setActive] = useState(0);
-	const listId = useId();
-	const input = useRef<HTMLInputElement>(null);
-	const container = usePortalContainer();
+	const offered = useMemo(() => (toolsOnly ? models.filter(supportsTools) : models), [models, toolsOnly]);
 	const current = models.find((m) => m.provider === choice.provider && m.id === choice.model);
 
 	const results = useMemo(() => {
 		const ranked = rankCommands(
 			query,
-			models.map((m) => ({
-				id: `${m.provider}|${m.id}`,
+			offered.map((m) => ({
+				id: keyOf(m),
 				title: m.name,
-				keywords: [m.id, PROVIDER_NAMES[m.provider]!],
+				keywords: [m.id, providerName(m.provider)],
 				run: () => {}
 			}))
 		);
-		return ranked.map((r) => models.find((m) => `${m.provider}|${m.id}` === r.id)!);
-	}, [query, models]);
+		const byKey = new Map(offered.map((m) => [keyOf(m), m]));
+		return ranked.map((r) => byKey.get(r.id)!).filter(Boolean);
+	}, [query, offered]);
 	const typed = query.trim();
 	// Offer the typed text as a model id only when it looks like one (or nothing matched), not for plain searches.
-	const exact = typed && !models.some((m) => m.id === typed) && (!results.length || /[-.\d]/.test(typed));
+	const exact = Boolean(typed) && !models.some((m) => m.id === typed) && (!results.length || /[-.\d]/.test(typed));
+	const groups = [...new Set(results.map((m) => m.provider))];
 
 	function choose(m: ModelInfo | null) {
 		if (m) onChoose({ provider: m.provider, model: m.id });
@@ -59,128 +75,106 @@ export function ModelPicker({
 		setQuery('');
 	}
 
-	function onKeyDown(e: KeyboardEvent) {
-		const count = results.length + (exact ? 1 : 0);
-		if (e.key === 'ArrowDown') setActive((i) => Math.min(i + 1, count - 1));
-		else if (e.key === 'ArrowUp') setActive((i) => Math.max(i - 1, 0));
-		else if (e.key === 'Enter') choose(results[active] ?? null);
-		else return;
-		e.preventDefault();
-	}
-
-	// Arrow keys keep the highlighted model in view.
-	useEffect(() => {
-		if (open) document.getElementById(`${listId}-${active}`)?.scrollIntoView({ block: 'nearest' });
-	}, [active, open, listId]);
-
 	const label = current?.name ?? choice.model;
-	let row = -1;
-	const groups = [...new Set(results.map((m) => m.provider))];
-	const optId = (i: number) => `${listId}-${i}`;
 	return (
-		<Popover.Root
+		<Popover
 			open={open}
 			onOpenChange={(next) => {
 				setOpen(next);
 				setQuery('');
-				setActive(0);
 			}}
 		>
-			<Popover.Trigger
+			<PopoverTrigger
 				aria-label={`Model: ${label}. Change model`}
-				className="inline-flex h-9 w-fit max-w-full min-w-0 items-center gap-1.5 rounded-full border border-line bg-surface pr-2.5 pl-3.5 text-base text-ink shadow-card transition-colors hover:border-muted/50 data-[state=open]:border-accent"
+				title={warning ?? undefined}
+				className={cn(
+					'inline-flex h-6 max-w-full min-w-0 cursor-pointer items-center gap-1 rounded-sm px-1.5 text-sm text-muted outline-none hover:bg-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/40 data-[state=open]:bg-hover data-[state=open]:text-ink',
+					className
+				)}
 			>
+				{warning && <TriangleAlert className="size-3.5 shrink-0 text-warn" aria-hidden="true" />}
 				<span className="truncate">{label}</span>
-				<ChevronDown size={16} className="shrink-0 text-muted" />
-			</Popover.Trigger>
-			<Popover.Portal container={container}>
-				<Popover.Content
-					align="start"
-					sideOffset={6}
-					collisionPadding={8}
-					onOpenAutoFocus={(e) => {
-						e.preventDefault();
-						input.current?.focus();
-					}}
-					className="tb-pop z-50 grid w-[min(340px,calc(100vw-24px))] gap-1 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-float"
+				<ChevronsUpDown className="size-3.5 shrink-0 text-faint" aria-hidden="true" />
+			</PopoverTrigger>
+			<PopoverContent align="start" className="w-[min(320px,calc(100vw-16px))] p-0">
+				<CommandRoot
+					shouldFilter={false}
+					loop
+					label="Search models"
+					defaultValue={keyOf({ provider: choice.provider, id: choice.model })}
 				>
-					<input
-						ref={input}
+					<CommandInput
 						value={query}
-						onChange={(e) => {
-							setQuery(e.target.value);
-							setActive(0);
-						}}
-						onKeyDown={onKeyDown}
+						onValueChange={setQuery}
 						placeholder="Search models"
-						role="combobox"
-						aria-expanded="true"
-						aria-controls={listId}
-						aria-activedescendant={optId(active)}
 						aria-label="Search models"
-						className="h-9 rounded-lg border border-line bg-bg px-3 text-base outline-none placeholder:text-muted focus:border-accent focus-visible:outline-none"
+						autoFocus
 					/>
-					<ul id={listId} role="listbox" className="max-h-72 overflow-y-auto overscroll-contain">
+					<CommandList className="max-h-72">
+						{!exact && <CommandEmpty>No models match.</CommandEmpty>}
 						{groups.map((p) => (
-							<li key={p} role="presentation">
-								<p className="px-2 pt-2 pb-1 text-xs font-semibold text-muted">{PROVIDER_NAMES[p]}</p>
-								<ul role="presentation">
-									{results
-										.filter((m) => m.provider === p)
-										.map((m) => {
-											row++;
-											const index = row;
-											const selected = m.provider === choice.provider && m.id === choice.model;
-											return (
-												<li
-													key={m.id}
-													id={optId(index)}
-													role="option"
-													aria-selected={index === active}
-													onMouseMove={() => setActive(index)}
-													onClick={() => choose(m)}
-													className="flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-base aria-selected:bg-soft"
-												>
-													<span className={`min-w-0 truncate ${selected ? 'font-medium text-accent' : ''}`}>{m.name}</span>
-													{selected ? (
-														<Check size={16} className="shrink-0 text-accent" />
-													) : (
-														<span className="max-w-[45%] shrink-0 truncate font-mono text-xs text-muted">{m.id}</span>
+							<CommandGroup key={p} heading={providerName(p)}>
+								{results
+									.filter((m) => m.provider === p)
+									.map((m) => {
+										const selected = m.provider === choice.provider && m.id === choice.model;
+										const context = formatContext(m.context);
+										return (
+											<CommandItem
+												key={keyOf(m)}
+												value={keyOf(m)}
+												onSelect={() => choose(m)}
+												title={m.id}
+												className="h-7 gap-2"
+											>
+												<span className={cn('min-w-0 flex-1 truncate', selected && 'font-medium text-ink')}>
+													{m.name}
+												</span>
+												<span className="flex shrink-0 items-center gap-1.5 text-xs text-faint">
+													{context && <span className="tb-num">{context}</span>}
+													{m.vision && (
+														<>
+															<Eye className="size-3.5" aria-hidden="true" />
+															<span className="sr-only">reads images</span>
+														</>
 													)}
-												</li>
-											);
-										})}
-								</ul>
-							</li>
+												</span>
+												<Check
+													className={cn('size-3.5 text-accent-ink', !selected && 'invisible')}
+													aria-hidden="true"
+												/>
+											</CommandItem>
+										);
+									})}
+							</CommandGroup>
 						))}
 						{exact && (
-							<li
-								id={optId(results.length)}
-								role="option"
-								aria-selected={active === results.length}
-								onMouseMove={() => setActive(results.length)}
-								onClick={() => choose(null)}
-								className="min-h-9 cursor-pointer truncate rounded-lg px-2 py-2 text-base aria-selected:bg-soft"
-							>
-								Use “{typed}”
-							</li>
+							<CommandGroup>
+								<CommandItem value="__typed__" onSelect={() => choose(null)} className="h-7">
+									<span className="truncate">Use “{typed}”</span>
+								</CommandItem>
+							</CommandGroup>
 						)}
-						{!results.length && !exact && <li className="px-2 py-3 text-sm text-muted">No models match.</li>}
-					</ul>
-					<div className="flex items-center justify-between gap-2 border-t border-line px-1.5 pt-1.5">
-						<span className="min-w-0 truncate text-xs text-muted">{note ?? `${models.length} models`}</span>
-						<button
-							type="button"
-							onClick={onRefresh}
-							disabled={refreshing}
-							className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-accent hover:bg-soft disabled:opacity-60"
+					</CommandList>
+					<div className="flex h-8 items-center gap-2 border-t border-line pr-1 pl-2.5">
+						<span
+							className={cn('tb-num min-w-0 flex-1 truncate text-xs', note ? 'text-warn' : 'text-faint')}
+							title={note ?? undefined}
 						>
-							<RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-							{refreshing ? 'Refreshing…' : 'Refresh models'}
-						</button>
+							{note ?? `${offered.length} ${offered.length === 1 ? 'model' : 'models'}`}
+						</span>
+						<Button
+							size="xs"
+							variant="ghost"
+							onClick={onRefresh}
+							loading={refreshing}
+							icon={<RefreshCw className="size-3.5" aria-hidden="true" />}
+						>
+							{refreshing ? 'Refreshing…' : 'Refresh'}
+						</Button>
 					</div>
-				</Popover.Content>
-			</Popover.Portal>
-		</Popover.Root>
+				</CommandRoot>
+			</PopoverContent>
+		</Popover>
 	);
 }

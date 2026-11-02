@@ -1,4 +1,3 @@
-/* Bundled fonts for extension pages (side panel, dashboard). Not for in-page UI: fonts declared inside a
+/* Bundled font for extension pages (side panel, dashboard). Not for in-page UI: fonts declared inside a
    shadow root do not load there, so in-page UI falls back to the system font stack. */
-@import '@fontsource-variable/schibsted-grotesk';
-@import '@fontsource-variable/source-serif-4';
+@import '@fontsource-variable/inter';

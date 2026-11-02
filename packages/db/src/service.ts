@@ -349,5 +349,12 @@ function describe(e: unknown): string {
 	if (/fetch|network|Failed to fetch|ENOTFOUND|ECONN/i.test(message))
 		return 'The database could not be reached. Check your connection.';
 	if (/password authentication failed/i.test(message)) return 'The database refused the link: its password is wrong.';
-	return message;
+	if (/database .* does not exist|role .* does not exist/i.test(message))
+		return 'The database link points to a database or user that does not exist.';
+	if (/timeout|timed out/i.test(message)) return 'The database took too long to answer. Try again in a moment.';
+	if (/quota|QUOTA_BYTES/i.test(message))
+		return 'Browser storage is full. Delete old history or memories, then try again.';
+	// Anything else stays in the background console only: raw driver errors can carry the connection string.
+	console.warn('Toolbelt account error', e);
+	return 'Something went wrong with your account or database. Try again; if it keeps happening, check the database link.';
 }

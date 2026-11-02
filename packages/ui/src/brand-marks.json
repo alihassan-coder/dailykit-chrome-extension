@@ -2,156 +2,115 @@
 	"toolbelt": {
 		"name": "Toolbelt",
 		"meaning": "One ribbon. Your everyday tools, connected.",
-		"from": "#283D57",
-		"to": "#142337",
-		"accent": "#B4E6CB",
+		"from": "#5172F6",
+		"to": "#4467F5",
+		"accent": "#B8C5FB",
 		"paths": [
 			{
-				"d": "M6.5 8.8 5.8 4.4",
-				"stroke": "#F7F7F2",
-				"strokeWidth": 2.2
-			},
-			{
-				"d": "m12 8.8 1-5.2",
-				"stroke": "#B4E6CB",
-				"strokeWidth": 2.2
-			},
-			{
-				"d": "M4.2 8.8h11.6v4.1a3.3 3.3 0 0 1-3.3 3.3h-5a3.3 3.3 0 0 1-3.3-3.3Z",
-				"stroke": "#F7F7F2",
+				"d": "M8.5 4.5v8a3 3 0 0 0 3 3h2",
+				"stroke": "#FFFFFF",
 				"strokeWidth": 1.6
 			},
 			{
-				"d": "M4.5 11.3h11M10 11.5v4.2",
-				"stroke": "#F7F7F2",
-				"strokeWidth": 1.25
+				"d": "M6 8.5h7",
+				"stroke": "#B8C5FB",
+				"strokeWidth": 1.6
 			}
 		]
 	},
 	"agent": {
 		"name": "Agent",
 		"meaning": "A precise pointer. A little intelligence.",
-		"from": "#574577",
-		"to": "#302540",
-		"accent": "#DAC5FF",
+		"from": "#6D6DDE",
+		"to": "#6262DC",
+		"accent": "#C3C3F2",
 		"paths": [
 			{
-				"d": "M5.1 4.2 14.3 10l-4.2 1.1-2.2 4.1Z",
-				"fill": "#F7F7F2",
-				"stroke": "none",
-				"strokeWidth": 0
+				"d": "M5 6 14 10 10 11 9 15Z",
+				"fill": "#FFFFFF",
+				"stroke": "#FFFFFF",
+				"strokeWidth": 1.6
 			},
 			{
-				"d": "m10.1 11.1 2.6 4.6",
-				"stroke": "#F7F7F2",
-				"strokeWidth": 1.7
-			},
-			{
-				"d": "M14.4 3.6v3.8M12.5 5.5h3.8",
-				"stroke": "#DAC5FF",
-				"strokeWidth": 1.4
+				"d": "M14.5 4v3M13 5.5h3",
+				"stroke": "#C3C3F2",
+				"strokeWidth": 1.6
 			}
 		]
 	},
 	"cairn": {
 		"name": "Cairn",
 		"meaning": "A lasting marker for conversations worth keeping.",
-		"from": "#315B53",
-		"to": "#193B35",
-		"accent": "#C1E8CC",
+		"from": "#C6832F",
+		"to": "#C27A1F",
+		"accent": "#E8CCAA",
 		"paths": [
 			{
-				"d": "M9 4h2.4a1.35 1.35 0 0 1 0 2.7H9A1.35 1.35 0 0 1 9 4Z",
-				"fill": "#C1E8CC",
-				"stroke": "none",
-				"strokeWidth": 0
-			},
-			{
-				"d": "M7.1 8.2h5.5a1.5 1.5 0 0 1 0 3H7.1a1.5 1.5 0 0 1 0-3Z",
-				"fill": "#F7F7F2",
-				"stroke": "none",
-				"strokeWidth": 0
-			},
-			{
-				"d": "M5.5 12.8h9a1.6 1.6 0 0 1 0 3.2h-9a1.6 1.6 0 0 1 0-3.2Z",
-				"fill": "#F7F7F2",
-				"stroke": "none",
-				"strokeWidth": 0
+				"d": "M9.5 4h1a1.5 1.5 0 0 1 0 3h-1a1.5 1.5 0 0 1 0-3ZM7.5 8h4a1.5 1.5 0 0 1 0 3h-4a1.5 1.5 0 0 1 0-3ZM6 12h8a2 2 0 0 1 0 4H6a2 2 0 0 1 0-4Z",
+				"fill": "#FFFFFF",
+				"stroke": "none"
 			}
 		]
 	},
 	"color-picker": {
 		"name": "Color picker",
 		"meaning": "Lift a color straight from the page.",
-		"from": "#82475D",
-		"to": "#49283A",
-		"accent": "#FFC3C6",
+		"from": "#C64E97",
+		"to": "#C2418F",
+		"accent": "#E8B7D4",
 		"paths": [
 			{
-				"d": "m11.1 5.9 2.5-2.5a1.55 1.55 0 0 1 2.2 2.2L13.3 8.1",
-				"fill": "#FFC3C6",
-				"stroke": "#FFC3C6",
-				"strokeWidth": 1.2
+				"d": "M8 12 12 8M10.5 6.5l3 3M11 7l2.5-2.5a1.414 1.414 0 0 1 2 2L13 9",
+				"stroke": "#FFFFFF",
+				"strokeWidth": 1.6
 			},
 			{
-				"d": "m9.6 5.5 4.9 4.9M10.8 6.8l-6.2 6.3-.8 3.1 3.1-.8 6.3-6.2",
-				"stroke": "#F7F7F2",
-				"strokeWidth": 1.6
+				"d": "M5.5 12S4 13.6 4 14.5a1.5 1.5 0 0 0 3 0C7 13.6 5.5 12 5.5 12Z",
+				"fill": "#E8B7D4",
+				"stroke": "none"
 			}
 		]
 	},
 	"grayscale": {
 		"name": "Black & white",
 		"meaning": "Less color. More focus.",
-		"from": "#535960",
-		"to": "#282D34",
-		"accent": "#B7BEC5",
+		"from": "#616169",
+		"to": "#55555E",
+		"accent": "#BEBEC2",
 		"paths": [
 			{
-				"d": "M10 4.5a5.5 5.5 0 1 0 0 11Z",
-				"fill": "#F7F7F2",
-				"stroke": "none",
-				"strokeWidth": 0
+				"d": "M10 4.5a5.5 5.5 0 0 0 0 11Z",
+				"fill": "#FFFFFF",
+				"stroke": "none"
 			},
 			{
-				"d": "M10 4.5a5.5 5.5 0 1 1 0 11",
-				"stroke": "#B7BEC5",
-				"strokeWidth": 1.5
-			},
-			{
-				"d": "M10 4.5v11",
-				"stroke": "#F7F7F2",
-				"strokeWidth": 1.25
+				"d": "M15.5 10a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0Z",
+				"stroke": "#FFFFFF",
+				"strokeWidth": 1.6
 			}
 		]
 	},
 	"profile-lens": {
 		"name": "Profile lens",
 		"meaning": "A closer look at the person behind the profile.",
-		"from": "#345D7E",
-		"to": "#1C354E",
-		"accent": "#B5DDF3",
+		"from": "#3A81D9",
+		"to": "#2B78D6",
+		"accent": "#AECCEF",
 		"paths": [
 			{
-				"d": "M13.6 8.6a5 5 0 1 1-10 0 5 5 0 0 1 10 0Z",
-				"stroke": "#F7F7F2",
-				"strokeWidth": 1.5
+				"d": "M14.5 9.5a5 5 0 1 1-10 0 5 5 0 0 1 10 0ZM13.5 13.5l2 2",
+				"stroke": "#FFFFFF",
+				"strokeWidth": 1.6
 			},
 			{
-				"d": "M10.2 7.1a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0Z",
-				"fill": "#B5DDF3",
-				"stroke": "none",
-				"strokeWidth": 0
+				"d": "M8 12a1.5 1.5 0 0 1 3 0",
+				"stroke": "#AECCEF",
+				"strokeWidth": 1.6
 			},
 			{
-				"d": "M5.9 11.6a2.8 2.8 0 0 1 5.4 0",
-				"stroke": "#B5DDF3",
-				"strokeWidth": 1.4
-			},
-			{
-				"d": "m12.3 12.3 3.7 3.7",
-				"stroke": "#F7F7F2",
-				"strokeWidth": 2
+				"d": "M11 7.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z",
+				"fill": "#AECCEF",
+				"stroke": "none"
 			}
 		]
 	}

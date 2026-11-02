@@ -7,6 +7,8 @@ export interface Command {
 	keywords?: string[];
 	/** Short hint shown on the right, e.g. a shortcut or "Tool". */
 	hint?: string;
+	/** Heading the command is listed under: "Tools", "Actions", "Settings". */
+	group?: string;
 	run: () => void;
 }
 

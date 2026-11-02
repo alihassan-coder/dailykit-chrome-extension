@@ -5,6 +5,12 @@ export interface ModelInfo {
 	provider: ProviderId;
 	id: string;
 	name: string;
+	/** Input context size in tokens, when the provider says. */
+	context?: number;
+	/** Accepts images, when known. */
+	vision?: boolean;
+	/** Calls tools, when the provider list says it cannot (Gemma on Gemini). Unknown means yes. */
+	tools?: boolean;
 }
 
 export interface ModelCache {
@@ -35,8 +41,28 @@ const NOT_CHAT =
 	/(embed|tts|whisper|transcribe|dall-e|image|moderation|realtime|audio|search|babbage|davinci|computer-use|codex-mini)/i;
 export const isChatModel = (id: string) => !NOT_CHAT.test(id);
 
+// Listed as chat models, but they cannot call tools (so they cannot run the browser agent).
+const NO_TOOLS = /(gemma|learnlm|aqa|nano-banana|-image|imagen|veo|-tts|o1-mini|o1-preview)/i;
+/** Whether a model can call tools. Computed from the id too, so lists cached before this was stored work. */
+export const supportsTools = (m: ModelInfo) => m.tools ?? !NO_TOOLS.test(m.id);
+
+/** "200K", "1M": a context size for the model picker. */
+export function formatContext(tokens: number | undefined): string | null {
+	if (!tokens || tokens <= 0) return null;
+	if (tokens >= 1_000_000) return `${Number((tokens / 1_000_000).toFixed(1))}M`;
+	return `${Math.round(tokens / 1000)}K`;
+}
+
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : undefined);
+
 // "gpt-5.5-mini" → "GPT-5.5 mini", "o3-pro" → "o3 pro": brand words keep their own casing.
-const BRANDS: Record<string, string> = { gpt: 'GPT', chatgpt: 'ChatGPT', grok: 'Grok', gemini: 'Gemini', claude: 'Claude' };
+const BRANDS: Record<string, string> = {
+	gpt: 'GPT',
+	chatgpt: 'ChatGPT',
+	grok: 'Grok',
+	gemini: 'Gemini',
+	claude: 'Claude'
+};
 export const pretty = (id: string) => {
 	const words = id.split(/[-_ ]+/).filter(Boolean);
 	const out: string[] = [];
@@ -111,7 +137,16 @@ export async function fetchModels(
 				const methods = (m.supportedGenerationMethods as string[] | undefined) ?? [];
 				if (!methods.includes('generateContent')) continue;
 				const id = String(m.name).replace(/^models\//, '');
-				if (isChatModel(id)) out.push({ provider, id, name: String(m.displayName ?? id) });
+				if (!isChatModel(id)) continue;
+				const gemma = /gemma/i.test(id);
+				out.push({
+					provider,
+					id,
+					name: String(m.displayName ?? id),
+					context: num(m.inputTokenLimit),
+					vision: /^gemini/i.test(id) ? true : undefined,
+					...(gemma || NO_TOOLS.test(id) ? { tools: false } : {})
+				});
 			}
 			if (!body.nextPageToken) break;
 			page = body.nextPageToken;

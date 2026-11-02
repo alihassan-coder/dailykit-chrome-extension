@@ -67,6 +67,19 @@ describe('Memory section', () => {
 		);
 	});
 
+	it('puts a memory back when deleting it fails', async () => {
+		background((req) =>
+			req.type === 'memory:delete'
+				? { ok: false, status: ready, error: 'raw database failure' }
+				: { ok: true, status: ready, items }
+		);
+		render(<MemorySection />);
+		fireEvent.click(await screen.findByRole('button', { name: 'Delete memory: Is vegetarian' }));
+		expect(screen.queryByText('Is vegetarian')).toBeNull();
+		expect(await screen.findByText('Is vegetarian')).toBeTruthy();
+		expect(screen.queryByText(/raw database failure/)).toBeNull();
+	});
+
 	it('asks before deleting everything', async () => {
 		const asked = background((req) =>
 			req.type === 'memory:list' ? { ok: true, status: ready, items } : { ok: true, status: ready }

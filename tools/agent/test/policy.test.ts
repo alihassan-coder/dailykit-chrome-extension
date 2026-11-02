@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decide, isBlocked, siteOf, type Proposal } from '../src/policy.ts';
+import { decide, isBlocked, isRestricted, pageAccess, siteOf, type Proposal } from '../src/policy.ts';
 
 const base = { siteAllowed: false, runOrigins: new Set(['https://github.com']) };
 const click = (name: string, url = 'https://shop.example.com/item'): Proposal => ({
@@ -71,6 +71,74 @@ describe('asking the user', () => {
 		const d = decide(nav, { ...base, siteAllowed: true });
 		expect(d).toMatchObject({ verdict: 'ask', alwaysAsk: true });
 		expect(d.verdict === 'ask' && d.warnings).toHaveLength(2);
+	});
+});
+
+describe('closing the bypasses', () => {
+	const allowed = { ...base, siteAllowed: true };
+
+	it('refuses Enter or Space on a focused purchase button, but not other keys', () => {
+		const key = (keys: string): Proposal => ({
+			kind: 'key',
+			url: 'https://shop.example.com/cart',
+			keys,
+			target: { role: 'button', name: 'Place order', sensitive: false }
+		});
+		expect(decide(key('Enter'), allowed).verdict).toBe('refuse');
+		expect(decide(key('Space'), allowed).verdict).toBe('refuse');
+		expect(decide(key('Tab'), allowed).verdict).toBe('allow');
+	});
+
+	it('treats a submit as clicking the form’s submit button, and always asks', () => {
+		const submit = (submitName: string): Proposal => ({
+			kind: 'type',
+			url: 'https://shop.example.com/cart',
+			text: 'SAVE10',
+			submit: true,
+			target: { role: 'textbox', name: 'Coupon', sensitive: false, submitName }
+		});
+		expect(decide(submit('Place order'), allowed)).toMatchObject({ verdict: 'refuse' });
+		expect(decide(submit('Create account'), allowed)).toMatchObject({ verdict: 'refuse' });
+		expect(decide(submit('Apply'), allowed)).toEqual({
+			verdict: 'ask',
+			alwaysAsk: true,
+			warnings: ['Submits the form (“Apply”).']
+		});
+	});
+
+	it('checks form inputs for purchases and permanent deletes', () => {
+		const input = (name: string): Proposal => ({
+			kind: 'form_input',
+			url: 'https://example.com/settings',
+			target: { role: 'checkbox', name, sensitive: false }
+		});
+		expect(decide(input('Confirm purchase'), allowed).verdict).toBe('refuse');
+		expect(decide(input('Delete my account'), allowed).verdict).toBe('refuse');
+		expect(decide(input('Subscribe to the newsletter'), allowed).verdict).toBe('allow');
+	});
+
+	it('checks the visible text of a click target too, not only its accessible name', () => {
+		const p: Proposal = {
+			kind: 'click',
+			url: 'https://shop.example.com/item',
+			target: { role: 'button', name: 'btn-primary', sensitive: false, text: 'Buy now' }
+		};
+		expect(decide(p, allowed).verdict).toBe('refuse');
+	});
+});
+
+describe('page access', () => {
+	it('tells a hidden address (no permission) and browser pages apart from blocked sites', () => {
+		expect(pageAccess('')).toBe('no-access');
+		expect(pageAccess('chrome://extensions')).toBe('restricted');
+		expect(pageAccess('chrome-extension://abc/options.html')).toBe('restricted');
+		expect(pageAccess('https://chromewebstore.google.com/detail/x')).toBe('restricted');
+		expect(pageAccess('https://chrome.google.com/webstore/category')).toBe('restricted');
+		expect(pageAccess('file:///C:/notes.txt')).toBe('restricted');
+		expect(pageAccess('https://example.com/report.pdf')).toBe('restricted');
+		expect(pageAccess('https://mail.google.com/')).toBe('blocked');
+		expect(pageAccess('https://github.com/')).toBe('ok');
+		expect(isRestricted('https://google.com/chrome')).toBe(false);
 	});
 });
 

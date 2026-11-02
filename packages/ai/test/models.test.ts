@@ -1,5 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
-import { MAX_AGE_MS, available, fetchModels, isChatModel, keyTag, refresh, stale } from '../src/models.ts';
+import {
+	MAX_AGE_MS,
+	available,
+	fetchModels,
+	formatContext,
+	isChatModel,
+	keyTag,
+	refresh,
+	stale,
+	supportsTools
+} from '../src/models.ts';
+import { choiceProblem } from '../src/useModels.ts';
 
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
@@ -63,7 +74,7 @@ describe('fetchModels', () => {
 			})
 		);
 		expect(await fetchModels('gemini', 'AIza', fetchFn)).toEqual([
-			{ provider: 'gemini', id: 'gemini-pro-x', name: 'Gemini Pro X' }
+			{ provider: 'gemini', id: 'gemini-pro-x', name: 'Gemini Pro X', vision: true }
 		]);
 	});
 
@@ -74,6 +85,29 @@ describe('fetchModels', () => {
 		await expect(
 			fetchModels('openai', 'k', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 		).rejects.toThrow('offline');
+	});
+
+	it('marks models that cannot call tools, and reads context sizes', async () => {
+		const fetchFn = vi.fn().mockResolvedValue(
+			reply({
+				models: [
+					{
+						name: 'models/gemma-x-it',
+						displayName: 'Gemma X',
+						inputTokenLimit: 8192,
+						supportedGenerationMethods: ['generateContent']
+					},
+					{ name: 'models/gemini-pro-x', inputTokenLimit: 1_048_576, supportedGenerationMethods: ['generateContent'] }
+				]
+			})
+		);
+		const [gemma, pro] = await fetchModels('gemini', 'AIza', fetchFn);
+		expect(supportsTools(gemma!)).toBe(false);
+		expect(supportsTools(pro!)).toBe(true);
+		expect(formatContext(pro!.context)).toBe('1M');
+		expect(formatContext(gemma!.context)).toBe('8K');
+		// Lists cached before tool support was stored are still checked by id.
+		expect(supportsTools({ provider: 'gemini', id: 'gemma-3-27b-it', name: 'Gemma' })).toBe(false);
 	});
 
 	it('filters non-chat ids', () => {
@@ -121,5 +155,28 @@ describe('caching', () => {
 	it('offers live lists, or verified Claude ids before the first load, and nothing guessed', () => {
 		expect(available({}, keys).map((m) => m.id)).toContain('claude-opus-5-5');
 		expect(available({}, { openai: 'sk' })).toEqual([]);
+	});
+});
+
+describe('the saved model', () => {
+	const keys = { anthropic: 'sk-ant-1' };
+	const live = {
+		anthropic: {
+			models: [{ provider: 'anthropic' as const, id: 'claude-opus-5-5', name: 'Opus' }],
+			fetchedAt: 0,
+			key: keyTag('sk-ant-1')
+		}
+	};
+
+	it('is flagged when the live list no longer has it', () => {
+		expect(choiceProblem({ provider: 'anthropic', model: 'claude-gone' }, live, keys)).toMatchObject({
+			code: 'model_not_found',
+			severity: 'warn'
+		});
+		expect(choiceProblem({ provider: 'anthropic', model: 'claude-opus-5-5' }, live, keys)).toBeNull();
+	});
+
+	it('is not flagged before a live list has loaded', () => {
+		expect(choiceProblem({ provider: 'anthropic', model: 'claude-gone' }, {}, keys)).toBeNull();
 	});
 });
